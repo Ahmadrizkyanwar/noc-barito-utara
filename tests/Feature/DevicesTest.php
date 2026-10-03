@@ -60,6 +60,74 @@ class DevicesTest extends TestCase
         $this->assertDatabaseHas('devices', ['name' => 'RT RW Net', 'use_snmp' => true]);
     }
 
+    public function test_admin_can_create_device_with_multiple_hosts(): void
+    {
+        $this->actingAs($this->admin())->post('/admin/jaringan', [
+            'name' => 'Router 2 IP',
+            'hosts' => ['10.0.0.1', '10.0.0.2', '10.0.0.2', ' '],
+            'type' => 'router',
+        ])->assertRedirect();
+
+        $device = Device::where('name', 'Router 2 IP')->firstOrFail();
+
+        // IP utama = elemen pertama; duplikat & kosong dibuang
+        $this->assertSame('10.0.0.1', $device->host);
+        $this->assertSame(['10.0.0.1', '10.0.0.2'], $device->hosts);
+        $this->assertSame(['10.0.0.1', '10.0.0.2'], $device->allHosts());
+    }
+
+    public function test_legacy_host_only_payload_backfills_hosts(): void
+    {
+        $this->actingAs($this->admin())->post('/admin/jaringan', [
+            'name' => 'Perangkat Lama',
+            'host' => '192.0.2.50',
+            'type' => 'router',
+        ])->assertRedirect();
+
+        $device = Device::where('name', 'Perangkat Lama')->firstOrFail();
+
+        $this->assertSame(['192.0.2.50'], $device->hosts);
+        $this->assertSame(['192.0.2.50'], $device->allHosts());
+    }
+
+    public function test_device_is_up_when_alternate_host_responds(): void
+    {
+        $this->fakeIcmp();
+
+        // IP utama mati — IP alternatif (127.0.0.1 pada fake) merespons
+        $device = $this->makeDevice([
+            'host' => '192.0.2.200',
+            'hosts' => ['192.0.2.200', '127.0.0.1'],
+        ]);
+
+        $status = $this->poller()->pollDevice($device);
+
+        $this->assertSame('up', $status);
+
+        $metric = $device->metrics()->first();
+        $this->assertTrue($metric->icmp_ok);
+        $this->assertEqualsWithDelta(1.0, (float) $metric->icmp_rtt_ms, 0.01);
+        $this->assertNull($metric->icmp_error);
+    }
+
+    public function test_device_stays_down_when_all_hosts_fail(): void
+    {
+        $this->fakeIcmp();
+
+        $device = $this->makeDevice([
+            'host' => '192.0.2.204',
+            'hosts' => ['192.0.2.204', '192.0.2.205'],
+        ]);
+
+        $status = $this->poller()->pollDevice($device);
+
+        $this->assertSame('down', $status);
+
+        $metric = $device->metrics()->first();
+        $this->assertFalse($metric->icmp_ok);
+        $this->assertSame('timeout (tidak ada balasan)', $metric->icmp_error);
+    }
+
     public function test_device_requires_name_and_host(): void
     {
         $this->actingAs($this->admin())

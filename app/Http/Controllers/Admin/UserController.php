@@ -28,7 +28,7 @@ class UserController extends Controller
             'name' => ['required', 'string', 'max:100'],
             'email' => ['required', 'email', 'max:255', 'unique:users,email'],
             'password' => ['required', 'confirmed', Password::min(8)],
-            'role' => ['required', Rule::in([User::ROLE_ADMIN, User::ROLE_USER])],
+            'role' => ['required', Rule::in([User::ROLE_ADMIN, User::ROLE_OPERATOR, User::ROLE_USER])],
         ]);
 
         $user = User::create([
@@ -36,6 +36,7 @@ class UserController extends Controller
             'email' => $data['email'],
             'password' => $data['password'],
             'role' => $data['role'],
+            'status' => User::STATUS_APPROVED, // dibuat admin → langsung aktif
         ]);
 
         return response()->json([
@@ -50,7 +51,7 @@ class UserController extends Controller
             'name' => ['sometimes', 'required', 'string', 'max:100'],
             'email' => ['sometimes', 'required', 'email', 'max:255', Rule::unique('users', 'email')->ignore($user->id)],
             'password' => ['nullable', 'confirmed', Password::min(8)],
-            'role' => ['sometimes', 'required', Rule::in([User::ROLE_ADMIN, User::ROLE_USER])],
+            'role' => ['sometimes', 'required', Rule::in([User::ROLE_ADMIN, User::ROLE_OPERATOR, User::ROLE_USER])],
         ]);
 
         // Tidak boleh menurunkan peran diri sendiri (mengunci diri sendiri).

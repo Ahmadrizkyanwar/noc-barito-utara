@@ -7,10 +7,12 @@ use App\Models\Device;
 use App\Models\DeviceMetric;
 use App\Models\InterfaceMetric;
 use App\Models\Ticket;
+use App\Models\VpsRequest;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -276,6 +278,26 @@ class DashboardController extends Controller
             'tickets' => $tickets,
             'categories' => config('noc.ticket_categories'),
             'statuses' => config('noc.ticket_statuses'),
+            'vps' => [
+                'status' => $request->user()->status,
+                'total' => $request->user()->vpsRequests()->count(),
+                'pending' => $request->user()->vpsRequests()->where('status', VpsRequest::STATUS_PENDING)->count(),
+            ],
+            'vpsStatuses' => config('noc.vps_statuses'),
+            'vpsRequests' => $request->user()->vpsRequests()
+                ->latest()
+                ->take(5)
+                ->get([
+                    'id', 'code', 'name', 'instansi', 'cores', 'ram_gb', 'public_ips',
+                    'purpose', 'status', 'admin_note', 'credential_file', 'created_at',
+                ])
+                ->map(function (VpsRequest $r) {
+                    if ($r->credential_file !== null && ! Storage::disk('public')->exists($r->credential_file)) {
+                        $r->credential_file = null; // file hilang → jangan tampilkan tombol unduh
+                    }
+
+                    return $r;
+                }),
         ]);
     }
 }

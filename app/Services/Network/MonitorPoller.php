@@ -89,14 +89,31 @@ class MonitorPoller
         /** @var array{rx: int, tx: int}|null counter aggregate SNMP (fallback) */
         $snmpCounters = null;
 
-        // ── ICMP ──
+        // ── ICMP (cek SEMUA IP — perangkat UP bila satu saja merespons) ──
         if ($device->use_icmp) {
             $anyProbe = true;
-            $ping = $this->ping->ping($device->host);
-            $row['icmp_ok'] = $ping['ok'];
-            $row['icmp_rtt_ms'] = $ping['rtt_ms'];
-            $row['icmp_error'] = $ping['error'];
-            $anyOk = $anyOk || $ping['ok'];
+
+            $icmpOk = false;
+            $rtt = null;
+            $err = null;
+
+            foreach ($device->allHosts() as $h) {
+                $ping = $this->ping->ping($h);
+
+                if ($ping['ok']) {
+                    $icmpOk = true;
+                    $rtt = $ping['rtt_ms'];
+                    $err = null;
+                    break; // cukup satu IP merespons (IP utama dicek lebih dulu)
+                }
+
+                $err ??= $ping['error']; // pertahankan pesan error IP utama
+            }
+
+            $row['icmp_ok'] = $icmpOk;
+            $row['icmp_rtt_ms'] = $rtt;
+            $row['icmp_error'] = $icmpOk ? null : $err;
+            $anyOk = $anyOk || $icmpOk;
         }
 
         // ── SNMP ──

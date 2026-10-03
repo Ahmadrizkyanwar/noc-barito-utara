@@ -1,4 +1,5 @@
 <script setup>
+import NotificationBell from '@/Components/NotificationBell.vue';
 import { Link, usePage } from '@inertiajs/vue3';
 import { computed } from 'vue';
 
@@ -19,6 +20,7 @@ const flash = computed(() => page.props.flash);
                     </span>
                 </Link>
                 <div class="flex items-center gap-3">
+                    <NotificationBell />
                     <span class="hidden text-sm text-slate-500 sm:inline">{{ auth?.name }}</span>
                     <Link
                         :href="route('logout')"

@@ -68,8 +68,12 @@ function submit() {
                 </form>
 
                 <p class="mt-6 text-center text-sm text-slate-500">
-                    Belum punya akses?
-                    <Link :href="route('lapor.index')" class="font-semibold text-brand-700 hover:underline">Lapor gangguan tanpa login</Link>
+                    Belum punya akun?
+                    <Link :href="route('register')" class="font-semibold text-brand-700 hover:underline">Daftar di sini</Link>
+                </p>
+                <p class="mt-2 text-center text-sm text-slate-500">
+                    atau
+                    <Link :href="route('lapor.index')" class="font-semibold text-brand-700 hover:underline">lapor gangguan tanpa login</Link>
                 </p>
             </div>
         </section>

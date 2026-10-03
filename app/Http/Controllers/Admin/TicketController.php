@@ -5,9 +5,11 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Ticket;
 use App\Models\TicketActivity;
+use App\Models\VpsRequest;
 use App\Services\Tickets\TicketService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -17,33 +19,81 @@ class TicketController extends Controller
     public function __construct(protected TicketService $tickets) {}
 
     /**
-     * Daftar semua tiket (admin) + filter.
+     * Daftar semua tiket (admin) + filter — DENGAN request VPS (kode VPS-…)
+     * digabung ke sistem ticketing lewat UNION.
      */
     public function index(Request $request): Response
     {
-        $q = Ticket::with(['reporter:id,name', 'assignee:id,name'])->latest();
+        $status = (string) $request->query('status', '');
+        $term = '%'.trim((string) $request->query('q')).'%';
+        $q = trim((string) $request->query('q'));
 
-        if ($request->filled('status')) {
-            $q->where('status', $request->string('status'));
+        $ticketStatuses = array_keys(config('noc.ticket_statuses'));
+        $vpsStatuses = array_keys(config('noc.vps_statuses'));
+
+        // ── Cabang tiket gangguan ──
+        $tickets = DB::table('tickets')
+            ->select([
+                'id', 'code', 'title', 'category', 'reporter_name',
+                'status', 'created_at',
+                DB::raw("'ticket' as kind"),
+                DB::raw('NULL as instansi'),
+            ]);
+
+        // ── Cabang request VPS (judul disusun di frontend) ──
+        $vps = DB::table('vps_requests')
+            ->select([
+                'id', 'code',
+                DB::raw('NULL as title'),
+                DB::raw("'VPS' as category"),
+                DB::raw('name as reporter_name'),
+                'status', 'created_at',
+                DB::raw("'vps' as kind"),
+                'instansi',
+            ]);
+
+        // Filter status: status tiket → hanya tiket; status VPS → hanya VPS.
+        if ($status !== '') {
+            if (in_array($status, $ticketStatuses, true)) {
+                $tickets->where('status', $status);
+                $vps->whereRaw('1 = 0');
+            } elseif (in_array($status, $vpsStatuses, true)) {
+                $vps->where('status', $status);
+                $tickets->whereRaw('1 = 0');
+            } else {
+                $tickets->whereRaw('1 = 0');
+                $vps->whereRaw('1 = 0');
+            }
         }
-        if ($request->filled('q')) {
-            $term = '%'.$request->string('q').'%';
-            $q->where(fn ($w) => $w->where('code', 'like', $term)
+
+        if ($q !== '') {
+            $tickets->where(fn ($w) => $w->where('code', 'like', $term)
                 ->orWhere('title', 'like', $term)
                 ->orWhere('reporter_name', 'like', $term));
+
+            $vps->where(fn ($w) => $w->where('code', 'like', $term)
+                ->orWhere('instansi', 'like', $term)
+                ->orWhere('name', 'like', $term));
         }
+
+        $rows = DB::query()
+            ->fromSub($tickets->unionAll($vps), 'rows')
+            ->orderByDesc('created_at')
+            ->orderByDesc('id');
 
         $stats = [
             'open' => Ticket::where('status', 'open')->count(),
             'proses' => Ticket::where('status', 'proses')->count(),
             'selesai' => Ticket::where('status', 'selesai')->count(),
+            'vps_pending' => VpsRequest::where('status', VpsRequest::STATUS_PENDING)->count(),
         ];
 
         return Inertia::render('Admin/Layanan', [
-            'tickets' => $q->paginate(15)->withQueryString(),
+            'tickets' => $rows->paginate(15)->withQueryString(),
             'stats' => $stats,
             'filters' => $request->only(['status', 'q']),
             'statuses' => config('noc.ticket_statuses'),
+            'allStatuses' => [...config('noc.ticket_statuses'), ...config('noc.vps_statuses')],
         ]);
     }
 

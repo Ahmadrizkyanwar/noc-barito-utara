@@ -21,6 +21,9 @@ const props = defineProps({
     tickets: { type: Array, default: () => [] },
     categories: { type: Array, default: () => [] },
     statuses: { type: Object, default: () => ({}) },
+    vps: { type: Object, default: () => ({}) },
+    vpsStatuses: { type: Object, default: () => ({}) },
+    vpsRequests: { type: Array, default: () => [] },
 });
 
 const isAdmin = computed(() => props.view === 'admin');
@@ -32,6 +35,15 @@ const statusClass = (s) =>
         open: 'bg-blue-100 text-blue-700',
         proses: 'bg-amber-100 text-amber-800',
         selesai: 'bg-emerald-100 text-emerald-700',
+    })[s] ?? 'bg-slate-100 text-slate-600';
+
+// Status request VPS (label & warna berbeda dari tiket)
+const vpsStatusLabel = (s) => props.vpsStatuses[s] ?? s;
+const vpsStatusClass = (s) =>
+    ({
+        pending: 'bg-amber-100 text-amber-800',
+        approved: 'bg-emerald-100 text-emerald-700',
+        rejected: 'bg-red-100 text-red-700',
     })[s] ?? 'bg-slate-100 text-slate-600';
 
 // ── Format bitrate ──
@@ -578,6 +590,31 @@ watch(() => props.widgets, () => rerender(), { deep: true });
             <h1 class="text-xl font-bold">Dashboard Saya</h1>
             <p class="mt-1 text-sm text-slate-500">Laporkan gangguan dan pantau status penanganan laporan Anda.</p>
 
+            <!-- Kartu Request VPS -->
+            <div class="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white p-4">
+                <div>
+                    <p class="text-sm font-bold">Request VPS</p>
+                    <p class="mt-0.5 text-xs text-slate-500">
+                        Status akun:
+                        <b :class="{
+                            'text-amber-600': vps.status === 'pending',
+                            'text-emerald-600': vps.status === 'approved',
+                            'text-red-600': vps.status === 'rejected',
+                        }">
+                            {{ ({ pending: 'Menunggu validasi', approved: 'Disetujui', rejected: 'Ditolak' })[vps.status] ?? vps.status }}
+                        </b>
+                        · {{ vps.total ?? 0 }} request
+                        <template v-if="vps.pending"> · {{ vps.pending }} menunggu review</template>
+                    </p>
+                </div>
+                <Link
+                    :href="route('vps.index')"
+                    class="rounded-lg bg-brand-700 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-800"
+                >
+                    Buka Request VPS →
+                </Link>
+            </div>
+
             <div class="mt-6 grid gap-6 lg:grid-cols-5">
                 <!-- Form lapor -->
                 <div class="lg:col-span-2">
@@ -675,8 +712,8 @@ watch(() => props.widgets, () => rerender(), { deep: true });
                     </form>
                 </div>
 
-                <!-- Tiket saya -->
-                <div class="lg:col-span-3">
+                <!-- Tiket saya + Riwayat Request VPS (kolom kanan, lebar sama) -->
+                <div class="space-y-6 lg:col-span-3">
                     <div class="rounded-xl border border-slate-200 bg-white">
                         <div class="border-b border-slate-100 px-4 py-3">
                             <h2 class="font-bold">Tiket Saya ({{ tickets.length }})</h2>
@@ -714,6 +751,66 @@ watch(() => props.widgets, () => rerender(), { deep: true });
                             </li>
                             <li v-if="tickets.length === 0" class="px-4 py-8 text-center text-sm text-slate-500">
                                 Anda belum pernah melapor.
+                            </li>
+                        </ul>
+                    </div>
+
+                    <!-- Riwayat Request VPS — di bawah Tiket Saya, lebar sama -->
+                    <div class="rounded-xl border border-slate-200 bg-white">
+                        <div class="flex items-center justify-between border-b border-slate-100 px-4 py-3">
+                            <h2 class="font-bold">Riwayat Request VPS ({{ vps.total ?? 0 }})</h2>
+                            <Link
+                                :href="route('vps.index')"
+                                class="text-xs font-semibold text-brand-700 hover:underline"
+                            >
+                                Request baru →
+                            </Link>
+                        </div>
+                        <ul class="flex-1 divide-y divide-slate-100">
+                            <li v-for="r in vpsRequests" :key="r.id" class="px-4 py-4">
+                                <div class="flex items-start justify-between gap-3">
+                                    <div class="min-w-0">
+                                        <p class="text-sm font-bold">
+                                            <span class="font-mono text-xs font-bold text-indigo-700">{{ r.code }}</span>
+                                        </p>
+                                        <p class="mt-0.5 text-xs text-slate-500">
+                                            {{ r.instansi }} — {{ r.name }}
+                                        </p>
+                                        <p class="mt-0.5 text-xs text-slate-500">
+                                            {{ r.cores }} core / {{ r.ram_gb }} GB / {{ r.public_ips }} IP ·
+                                            {{ new Date(r.created_at).toLocaleDateString('id-ID') }}
+                                        </p>
+                                    </div>
+                                    <span class="shrink-0 rounded-full px-2.5 py-1 text-xs font-bold" :class="vpsStatusClass(r.status)">
+                                        {{ vpsStatusLabel(r.status) }}
+                                    </span>
+                                </div>
+
+                                <p class="mt-2 text-sm text-slate-600">{{ r.purpose }}</p>
+
+                                <p v-if="r.admin_note" class="mt-2 rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-600">
+                                    Catatan admin: {{ r.admin_note }}
+                                </p>
+
+                                <div
+                                    v-if="r.credential_file"
+                                    class="mt-2 flex flex-wrap items-center gap-2 rounded-lg bg-emerald-50 px-3 py-2"
+                                >
+                                    <span class="text-xs font-semibold text-emerald-800">🔑 Kredensial tersedia</span>
+                                    <a
+                                        :href="route('vps.credentials', r.id)"
+                                        class="text-xs font-bold text-emerald-700 hover:underline"
+                                    >
+                                        Unduh ↓
+                                    </a>
+                                </div>
+                            </li>
+                            <li v-if="vpsRequests.length === 0" class="px-4 py-8 text-center text-sm text-slate-500">
+                                Belum ada request VPS.
+                                <Link :href="route('vps.index')" class="font-semibold text-brand-700 hover:underline">Buat sekarang</Link>
+                            </li>
+                            <li v-if="vps.total > vpsRequests.length" class="px-4 py-3 text-center text-xs text-slate-400">
+                                Menampilkan {{ vpsRequests.length }} terbaru dari {{ vps.total }} request
                             </li>
                         </ul>
                     </div>

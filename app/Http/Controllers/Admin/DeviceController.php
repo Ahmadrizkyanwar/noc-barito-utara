@@ -9,6 +9,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -319,7 +320,10 @@ class DeviceController extends Controller
     {
         $data = $request->validate([
             'name' => ['required', 'string', 'max:100'],
-            'host' => ['required', 'string', 'max:255'],
+            // IP utama diisi OTOMATIS dari daftar `hosts` (lihat normalisasi).
+            'host' => ['required_without:hosts', 'nullable', 'string', 'max:255'],
+            'hosts' => ['nullable', 'array', 'max:8'],
+            'hosts.*' => ['nullable', 'string', 'max:255'],
             'type' => ['required', Rule::in(['router', 'switch', 'server', 'website', 'lainnya'])],
             'location' => ['nullable', 'string', 'max:150'],
             'enabled' => ['boolean'],
@@ -347,6 +351,26 @@ class DeviceController extends Controller
                 $data[$key] = '';
             }
         }
+
+        // ── Normalisasi daftar IP: unik, tanpa kosong, IP utama = pertama ──
+        $hosts = array_values(array_unique(array_filter(array_map(
+            static fn ($h) => trim((string) $h),
+            $data['hosts'] ?? []
+        ), static fn ($h) => $h !== '')));
+
+        // Kompatibilitas mundur: payload lama hanya mengirim `host`.
+        if ($hosts === [] && ($data['host'] ?? '') !== '') {
+            $hosts = [trim((string) $data['host'])];
+        }
+
+        if ($hosts === []) {
+            throw ValidationException::withMessages([
+                'host' => 'Minimal satu IP/hostname wajib diisi.',
+            ]);
+        }
+
+        $data['hosts'] = $hosts;
+        $data['host'] = $hosts[0];
 
         return $data;
     }

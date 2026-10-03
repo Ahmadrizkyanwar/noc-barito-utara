@@ -1,4 +1,5 @@
 <script setup>
+import NotificationBell from '@/Components/NotificationBell.vue';
 import { Link, usePage } from '@inertiajs/vue3';
 import { computed } from 'vue';
 
@@ -8,12 +9,19 @@ const flash = computed(() => page.props.flash);
 const url = computed(() => new URL(page.url, window.location.origin).pathname);
 
 const menus = [
-    { label: 'Dashboard', href: route('admin.dashboard'), exact: true },
-    { label: 'Jaringan', href: route('admin.devices.index'), prefix: '/admin/jaringan' },
-    { label: 'Layanan (Tiket)', href: route('admin.tickets.index'), prefix: '/admin/layanan' },
-    { label: 'Pengguna', href: route('admin.users.index'), prefix: '/admin/pengaturan/user' },
-    { label: 'Webhook Telegram', href: route('admin.webhooks.index'), prefix: '/admin/pengaturan/webhook' },
+    { label: 'Dashboard', href: route('admin.dashboard'), exact: true, roles: ['admin'] },
+    { label: 'Jaringan', href: route('admin.devices.index'), prefix: '/admin/jaringan', roles: ['admin'] },
+    { label: 'Layanan (Tiket)', href: route('admin.tickets.index'), prefix: '/admin/layanan', roles: ['admin'] },
+    { label: 'Registrasi User', href: route('admin.registrations.index'), prefix: '/admin/registrasi', roles: ['admin', 'operator'] },
+    { label: 'Review VPS', href: route('admin.vps.index'), prefix: '/admin/vps', roles: ['admin', 'operator'] },
+    { label: 'Pengguna', href: route('admin.users.index'), prefix: '/admin/pengaturan/user', roles: ['admin'] },
+    { label: 'Webhook Telegram', href: route('admin.webhooks.index'), prefix: '/admin/pengaturan/webhook', roles: ['admin'] },
 ];
+
+const visibleMenus = computed(() => {
+    const role = auth.value?.role;
+    return menus.filter((m) => !m.roles || m.roles.includes(role));
+});
 
 function isActive(menu) {
     if (menu.exact) {
@@ -31,10 +39,13 @@ function isActive(menu) {
                     <img src="/noc-logo.png" alt="NOC" class="h-9 w-9 rounded" @error="$event.target.style.display='none'">
                     <div class="text-sm font-bold leading-tight">
                         NOC Kabupaten Barito Utara
-                        <span class="block text-[11px] font-medium text-slate-500">Panel Administrator</span>
+                        <span class="block text-[11px] font-medium text-slate-500">
+                            {{ auth?.role === 'operator' ? 'Panel Operator' : 'Panel Administrator' }}
+                        </span>
                     </div>
                 </div>
                 <div class="flex items-center gap-3">
+                    <NotificationBell />
                     <Link :href="route('landing')" class="text-sm font-semibold text-slate-600 hover:text-brand-700">Situs</Link>
                     <span class="hidden text-sm text-slate-500 sm:inline">{{ auth?.name }}</span>
                     <Link
@@ -54,7 +65,7 @@ function isActive(menu) {
             <aside class="hidden w-56 shrink-0 lg:block">
                 <nav class="space-y-1 rounded-xl border border-slate-200 bg-white p-3">
                     <Link
-                        v-for="menu in menus"
+                        v-for="menu in visibleMenus"
                         :key="menu.label"
                         :href="menu.href"
                         class="block rounded-lg px-3 py-2 text-sm font-semibold transition"
@@ -69,7 +80,7 @@ function isActive(menu) {
             <div class="w-full lg:hidden">
                 <div class="mb-4 flex gap-2 overflow-x-auto rounded-xl border border-slate-200 bg-white p-2">
                     <Link
-                        v-for="menu in menus"
+                        v-for="menu in visibleMenus"
                         :key="menu.label"
                         :href="menu.href"
                         class="whitespace-nowrap rounded-lg px-3 py-1.5 text-xs font-semibold"

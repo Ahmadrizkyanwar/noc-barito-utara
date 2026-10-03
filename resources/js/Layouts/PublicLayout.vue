@@ -1,4 +1,5 @@
 <script setup>
+import NotificationBell from '@/Components/NotificationBell.vue';
 import { Link, usePage } from '@inertiajs/vue3';
 import { computed } from 'vue';
 
@@ -21,6 +22,14 @@ const flash = computed(() => page.props.flash);
                 </Link>
 
                 <nav class="flex items-center gap-2">
+                    <NotificationBell v-if="auth" />
+                    <Link
+                        v-if="!auth"
+                        :href="route('register')"
+                        class="rounded-lg px-3 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-100"
+                    >
+                        Daftar
+                    </Link>
                     <Link
                         v-if="!auth"
                         :href="route('login')"

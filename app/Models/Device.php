@@ -11,6 +11,7 @@ class Device extends Model
     protected $fillable = [
         'name',
         'host',
+        'hosts',
         'type',
         'location',
         'enabled',
@@ -38,6 +39,7 @@ class Device extends Model
             'use_icmp' => 'boolean',
             'use_snmp' => 'boolean',
             'use_routeros' => 'boolean',
+            'hosts' => 'array',
             'last_checked_at' => 'datetime',
             'last_rtt_ms' => 'float',
             'last_cpu' => 'integer',
@@ -46,6 +48,30 @@ class Device extends Model
             'routeros_port' => 'integer',
             'routeros_timeout' => 'integer',
         ];
+    }
+
+    /**
+     * Semua IP/hostname perangkat — IP utama di depan.
+     * Fallback ke kolom `host` bila `hosts` kosong (baris lama).
+     *
+     * @return list<string>
+     */
+    public function allHosts(): array
+    {
+        $hosts = [];
+
+        foreach ((array) ($this->hosts ?? []) as $h) {
+            $h = trim((string) $h);
+            if ($h !== '' && ! in_array($h, $hosts, true)) {
+                $hosts[] = $h;
+            }
+        }
+
+        if ($hosts === [] && (string) $this->host !== '') {
+            $hosts[] = (string) $this->host;
+        }
+
+        return $hosts;
     }
 
     public function metrics(): HasMany

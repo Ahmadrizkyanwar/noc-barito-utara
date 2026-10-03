@@ -10,6 +10,11 @@ services:
       DB_PORT: "3306"
     ports:
       - "3003:80"
+    volumes:
+      # Persistensi storage (uploads foto tiket + kredensial VPS, log,
+      # compiled view) — TANPA ini file runtime hilang tiap `docker compose up`
+      # karena container di-recreate dari image.
+      - noc-storage:/var/www/html/storage
     networks:
       - mikrotik-monitor_default
     healthcheck:
@@ -17,7 +22,10 @@ services:
       interval: 30s
       timeout: 5s
       retries: 3
-      start_period: 30s
+      start_period: 20s
+
+volumes:
+  noc-storage:
 
 networks:
   # Container DB existing (mikrotik-monitor-db) — dipakai untuk isolasi

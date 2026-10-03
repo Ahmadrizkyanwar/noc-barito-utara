@@ -1,13 +1,17 @@
 <?php
 
 use App\Http\Controllers\Admin\DeviceController;
+use App\Http\Controllers\Admin\RegistrationController;
 use App\Http\Controllers\Admin\TicketController as AdminTicketController;
 use App\Http\Controllers\Admin\UserController;
+use App\Http\Controllers\Admin\VpsReviewController;
 use App\Http\Controllers\Admin\WebhookController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\LandingController;
+use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\ReportController;
+use App\Http\Controllers\VpsRequestController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -21,6 +25,11 @@ Route::get('/status', [LandingController::class, 'status'])->name('landing.statu
 Route::get('/login', [AuthController::class, 'showLogin'])->name('login')->middleware('guest');
 Route::post('/login', [AuthController::class, 'login'])->middleware('guest');
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout')->middleware('auth');
+
+// Registrasi user publik — divalidasi admin/operator (status default pending)
+Route::get('/registrasi', [AuthController::class, 'showRegister'])->name('register')->middleware('guest');
+Route::post('/registrasi', [AuthController::class, 'register'])
+    ->middleware(['guest', 'throttle:10,1']);
 
 // Laporan gangguan publik (tanpa login)
 Route::get('/lapor', [ReportController::class, 'create'])->name('lapor.index');
@@ -40,6 +49,39 @@ Route::get('/uploads/{path}', [ReportController::class, 'photo'])
 */
 Route::middleware('auth')->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+
+    // Request VPS — terkunci sampai akun disetujui (dicek di controller)
+    Route::get('/vps', [VpsRequestController::class, 'index'])->name('vps.index');
+    Route::post('/vps', [VpsRequestController::class, 'store'])
+        ->name('vps.store')
+        ->middleware('throttle:10,1');
+    // Unduh kredensial (pemilik request ATAU reviewer)
+    Route::get('/vps/{vpsRequest}/credentials', [VpsRequestController::class, 'credentials'])
+        ->name('vps.credentials');
+
+    // Lonceng notifikasi
+    Route::post('/notifications/{notification}/read', [NotificationController::class, 'read'])
+        ->name('notifications.read');
+    Route::post('/notifications/read-all', [NotificationController::class, 'readAll'])
+        ->name('notifications.readAll');
+});
+
+/*
+|--------------------------------------------------------------------------
+| Admin + Operator — validasi registrasi & review request VPS
+|--------------------------------------------------------------------------
+| Operator HANYA mendapat akses ke dua halaman ini (halaman admin lain
+| tetap dijaga `role:admin`).
+*/
+Route::middleware(['auth', 'role:admin,operator'])->prefix('admin')->name('admin.')->group(function () {
+    Route::get('/registrasi', [RegistrationController::class, 'index'])->name('registrations.index');
+    Route::patch('/registrasi/{user}/status', [RegistrationController::class, 'updateStatus'])->name('registrations.status');
+
+    Route::get('/vps', [VpsReviewController::class, 'index'])->name('vps.index');
+    Route::patch('/vps/{vpsRequest}/status', [VpsReviewController::class, 'updateStatus'])->name('vps.status');
+    // Upload dokumen kredensial SETELAH disetujui
+    Route::post('/vps/{vpsRequest}/credentials', [VpsReviewController::class, 'uploadCredentials'])
+        ->name('vps.credentials.upload');
 });
 
 /*

@@ -14,6 +14,7 @@ const editing = ref(null);
 const empty = {
     name: '',
     host: '',
+    hosts: [''],
     type: 'router',
     location: '',
     enabled: true,
@@ -46,6 +47,7 @@ function openEdit(device) {
     Object.assign(form, {
         name: device.name,
         host: device.host,
+        hosts: device.hosts?.length ? [...device.hosts] : [device.host],
         type: device.type,
         location: device.location ?? '',
         enabled: device.enabled,
@@ -162,7 +164,10 @@ function applyFilter(key, value) {
                             <Link :href="route('admin.devices.show', d.id)" class="font-semibold text-brand-700 hover:underline">
                                 {{ d.name }}
                             </Link>
-                            <p class="text-xs text-slate-500">{{ d.host }} · {{ d.type }}</p>
+                            <p class="text-xs text-slate-500">
+                                {{ d.host }}<template v-if="(d.hosts?.length ?? 1) > 1"> +{{ d.hosts.length - 1 }} IP</template>
+                                · {{ d.type }}
+                            </p>
                         </td>
                         <td class="px-4 py-3">
                             <div class="flex flex-wrap gap-1">
@@ -243,10 +248,42 @@ function applyFilter(key, value) {
                             <input v-model="form.name" type="text" required class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" :class="{ 'border-red-400': form.errors.name }">
                             <p v-if="form.errors.name" class="mt-1 text-xs text-red-600">{{ form.errors.name }}</p>
                         </div>
-                        <div>
-                            <label class="block text-xs font-semibold text-slate-600">Host / IP *</label>
-                            <input v-model="form.host" type="text" required placeholder="192.168.1.1" class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" :class="{ 'border-red-400': form.errors.host }">
-                            <p v-if="form.errors.host" class="mt-1 text-xs text-red-600">{{ form.errors.host }}</p>
+                        <div class="sm:col-span-2">
+                            <label class="block text-xs font-semibold text-slate-600">IP / Host Perangkat *</label>
+                            <p class="mt-0.5 text-[11px] text-slate-400">
+                                IP pertama = IP utama (dipakai SNMP, RouterOS, dan tampilan). Router dengan banyak IP bisa ditambahkan — ICMP mengecek semuanya.
+                            </p>
+                            <div class="mt-1.5 space-y-2">
+                                <div v-for="(h, i) in form.hosts" :key="i" class="flex gap-2">
+                                    <input
+                                        v-model="form.hosts[i]"
+                                        type="text"
+                                        :placeholder="i === 0 ? '192.168.1.1 (utama)' : 'IP alternatif…'"
+                                        class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                                        :class="{ 'border-red-400': form.errors['hosts.' + i] }"
+                                    >
+                                    <button
+                                        v-if="form.hosts.length > 1"
+                                        type="button"
+                                        class="rounded-lg border border-slate-300 px-3 text-sm text-slate-500 hover:bg-slate-100"
+                                        aria-label="Hapus IP"
+                                        @click="form.hosts.splice(i, 1)"
+                                    >
+                                        ✕
+                                    </button>
+                                </div>
+                            </div>
+                            <button
+                                v-if="form.hosts.length < 8"
+                                type="button"
+                                class="mt-2 text-xs font-semibold text-brand-700 hover:underline"
+                                @click="form.hosts.push('')"
+                            >
+                                + Tambah IP
+                            </button>
+                            <p v-if="form.errors.hosts || form.errors.host" class="mt-1 text-xs text-red-600">
+                                {{ form.errors.hosts ?? form.errors.host }}
+                            </p>
                         </div>
                         <div>
                             <label class="block text-xs font-semibold text-slate-600">Tipe</label>

@@ -67,4 +67,37 @@ return [
         'proses' => 'Diproses',
         'selesai' => 'Selesai',
     ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Request VPS
+    |--------------------------------------------------------------------------
+    */
+
+    // Opsi checkbox "Service PORT yang dibuka" pada form request VPS
+    // (key = nilai yang disimpan, label = tampilan di form).
+    'vps_ports' => [
+        '22' => 'SSH',
+        '80' => 'HTTP',
+        '443' => 'HTTPS',
+        '21' => 'FTP',
+        '25' => 'SMTP',
+        '53' => 'DNS',
+        '3306' => 'MySQL',
+        '5432' => 'PostgreSQL',
+        '8080' => 'HTTP-Alt',
+        '20000-20100' => 'Passive FTP',
+    ],
+
+    'vps_statuses' => [
+        'pending' => 'Menunggu Review',
+        'approved' => 'Disetujui',
+        'rejected' => 'Ditolak',
+    ],
+
+    'registration_statuses' => [
+        'pending' => 'Menunggu Validasi',
+        'approved' => 'Disetujui',
+        'rejected' => 'Ditolak',
+    ],
 ];
