@@ -1,0 +1,13 @@
+# Jangan masukkan ke image (secrets & artefak lokal)
+.env
+.env.*
+!.env.example
+/vendor
+/node_modules
+/public/build
+/storage
+/bootstrap/cache/*.php
+.phpunit.cache
+.phpunit.result.cache
+*.log
+database/database.sqlite

@@ -1,0 +1,26 @@
+services:
+  noc-laravel:
+    build: .
+    container_name: noc-barutara
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      DB_HOST: mariadb
+      DB_PORT: "3306"
+    ports:
+      - "3003:80"
+    networks:
+      - mikrotik-monitor_default
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1/up"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+networks:
+  # Container DB existing (mikrotik-monitor-db) — dipakai untuk isolasi
+  # antar-stack tanpa mengubah compose proyek lama.
+  mikrotik-monitor_default:
+    external: true
