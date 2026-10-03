@@ -31,6 +31,19 @@ Route::get('/registrasi', [AuthController::class, 'showRegister'])->name('regist
 Route::post('/registrasi', [AuthController::class, 'register'])
     ->middleware(['guest', 'throttle:10,1']);
 
+// Verifikasi email WAJIB sebelum login — endpoint tujuan link bersifat
+// `signed` (HMAC) + hash sha1(email) → TANPA login, kepemilikan email
+// dibuktikan oleh link yang diterima lewat inbox.
+Route::get('/email/verify', [AuthController::class, 'showVerifyNotice'])
+    ->name('verification.notice')
+    ->middleware('guest');
+Route::post('/email/resend', [AuthController::class, 'resendVerification'])
+    ->name('verification.resend')
+    ->middleware(['guest', 'throttle:6,1']);
+Route::get('/email/verify/{id}/{hash}', [AuthController::class, 'verifyEmail'])
+    ->name('verification.verify')
+    ->middleware(['signed', 'throttle:6,1']);
+
 // Laporan gangguan publik (tanpa login)
 Route::get('/lapor', [ReportController::class, 'create'])->name('lapor.index');
 Route::post('/lapor', [ReportController::class, 'store'])

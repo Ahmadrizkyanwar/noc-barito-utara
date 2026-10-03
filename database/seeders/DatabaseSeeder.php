@@ -30,6 +30,8 @@ class DatabaseSeeder extends Seeder
                 'name' => ucfirst($username),
                 'password' => $password, // cast `hashed`
                 'role' => User::ROLE_ADMIN,
+                'status' => User::STATUS_APPROVED,
+                'email_verified_at' => now(), // admin bawaan tidak perlu verifikasi email
             ]
         );
 

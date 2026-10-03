@@ -41,16 +41,27 @@ class AuthController extends Controller
 
         $user = $request->user();
 
-        // Registrasi DITOLAK → tidak boleh masuk (pending boleh — fitur VPS terkunci).
+        // 1. Registrasi DITOLAK → tidak boleh masuk (permanen).
         if ($user->status === User::STATUS_REJECTED) {
-            Auth::logout();
-            $request->session()->invalidate();
-            $request->session()->regenerateToken();
+            $this->flushSession();
 
             throw ValidationException::withMessages([
                 'email' => 'Registrasi Anda ditolak oleh admin. Silakan hubungi admin untuk informasi.',
             ]);
         }
+
+        // 2. Email BELUM diverifikasi → tidak boleh login
+        //    (tautan verifikasi bisa dikirim ulang di halaman verifikasi).
+        if (! $user->hasVerifiedEmail()) {
+            $this->flushSession();
+
+            throw ValidationException::withMessages([
+                'email' => 'Email Anda belum diverifikasi. Cek inbox email untuk tautan verifikasi — bisa minta kirim ulang di halaman verifikasi.',
+            ]);
+        }
+
+        // Catatan: status PENDING tetap BISA login — hanya fitur Request VPS
+        // yang terkuncil sampai divalidasi admin/operator (canRequestVps()).
 
         // Tujuan awal (mis. /admin saat belum login) hanya untuk reviewer;
         // user biasa selalu jatuh ke /dashboard (guard role di middleware).
@@ -86,7 +97,8 @@ class AuthController extends Controller
     }
 
     /**
-     * Buat akun baru berstatus `pending` — aktif setelah validasi admin/operator.
+     * Buat akun baru: status `pending` + email BELUM diverifikasi.
+     * Keduanya (email + admin) wajib sebelum bisa login.
      */
     public function register(Request $request): RedirectResponse
     {
@@ -106,15 +118,104 @@ class AuthController extends Controller
             'status' => User::STATUS_PENDING,
         ]);
 
-        Auth::login($user);
-        $request->session()->regenerate();
+        // Email verifikasi (signed URL 60 menit) + lonceng untuk admin/operator.
+        // Gagal kirim (SMTP down dsb.) TIDAK menghapus akun — user bisa kirim ulang.
+        try {
+            $user->sendEmailVerificationNotification();
+        } catch (\Throwable $e) {
+            report($e);
 
-        // Beri tahu admin/operator lewat lonceng notifikasi.
+            return redirect()->route('verification.notice')->with(
+                'error',
+                'Registrasi berhasil, tetapi email verifikasi gagal dikirim. '
+                .'Gunakan tombol "Kirim ulang" di halaman verifikasi atau hubungi admin.'
+            );
+        }
+
         $this->notifier->registrationReceived($user);
 
         return redirect()
-            ->route('dashboard')
-            ->with('success', 'Registrasi berhasil. Akun Anda menunggu validasi admin — fitur Request VPS terbuka setelah disetujui.');
+            ->route('verification.notice')
+            ->with('success', 'Registrasi berhasil. Kami sudah mengirim tautan verifikasi ke '.$user->email
+                .' — klik tautan di email, lalu Anda bisa login. Fitur Request VPS terbuka '
+                .'setelah divalidasi admin/operator.');
+    }
+
+    // ── Verifikasi email (tanpa login — dibuktikan lewat link signed) ───────
+
+    /**
+     * Halaman "cek email Anda untuk tautan verifikasi" + kirim ulang.
+     */
+    public function showVerifyNotice(): Response|RedirectResponse
+    {
+        if (Auth::check()) {
+            return $this->homeFor(request()->user());
+        }
+
+        return Inertia::render('VerifyEmail');
+    }
+
+    /**
+     * Kirim ulang tautan verifikasi (throttled, pesan generik anti-enumerasi).
+     */
+    public function resendVerification(Request $request): RedirectResponse
+    {
+        $data = $request->validate([
+            'email' => ['required', 'email'],
+        ]);
+
+        $user = User::where('email', $data['email'])->first();
+
+        if ($user !== null && ! $user->hasVerifiedEmail()) {
+            try {
+                $user->sendEmailVerificationNotification();
+            } catch (\Throwable $e) {
+                report($e);
+
+                return back()->with(
+                    'error',
+                    'Email verifikasi gagal dikirim (layanan email bermasalah). Coba lagi nanti.'
+                );
+            }
+        }
+
+        return back()->with(
+            'success',
+            'Jika email terdaftar dan belum diverifikasi, tautan verifikasi baru sudah dikirim. '
+            .'Periksa kotak masuk dan folder spam.'
+        );
+    }
+
+    /**
+     * Endpoint tujuan link di email — route `signed` (HMAC) + `hash = sha1(email)`.
+     * TANPA auth: kepemilikan email dibuktikan oleh link yang diterima.
+     */
+    public function verifyEmail(Request $request, string $id, string $hash): RedirectResponse
+    {
+        $user = User::find($id);
+
+        if ($user === null || ! hash_equals(sha1($user->getEmailForVerification()), $hash)) {
+            abort(403, 'Tautan verifikasi tidak valid.');
+        }
+
+        if (! $user->hasVerifiedEmail()) {
+            $user->markEmailAsVerified();
+        }
+
+        $message = $user->status === User::STATUS_APPROVED
+            ? 'Email berhasil diverifikasi — silakan login.'
+            : 'Email berhasil diverifikasi — silakan login. Fitur Request VPS terbuka '
+              .'setelah akun divalidasi admin/operator.';
+
+        return redirect()->route('login')->with('success', $message);
+    }
+
+    /** Lepas sesi (logout + regenerasi token) — dipakai saat login ditolak. */
+    protected function flushSession(): void
+    {
+        Auth::logout();
+        request()->session()->invalidate();
+        request()->session()->regenerateToken();
     }
 
     /**

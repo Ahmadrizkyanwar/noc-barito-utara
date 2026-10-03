@@ -2,16 +2,19 @@
 
 namespace App\Models;
 
+use App\Notifications\VerifyEmailIndo;
 use Database\Factories\UserFactory;
+use Illuminate\Auth\MustVerifyEmail;
+use Illuminate\Contracts\Auth\MustVerifyEmail as MustVerifyEmailContract;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
-class User extends Authenticatable
+class User extends Authenticatable implements MustVerifyEmailContract
 {
     /** @use HasFactory<UserFactory> */
-    use HasFactory, Notifiable;
+    use HasFactory, MustVerifyEmail, Notifiable;
 
     public const ROLE_ADMIN = 'admin';
 
@@ -35,6 +38,7 @@ class User extends Authenticatable
         'password',
         'role',
         'status',
+        'email_verified_at',
     ];
 
     /** @var list<string> */
@@ -80,6 +84,14 @@ class User extends Authenticatable
     public function canRequestVps(): bool
     {
         return $this->isApproved();
+    }
+
+    /**
+     * Kirim email verifikasi (templat Indonesia, URL signed 60 menit).
+     */
+    public function sendEmailVerificationNotification(): void
+    {
+        $this->notify(new VerifyEmailIndo);
     }
 
     public function tickets(): HasMany

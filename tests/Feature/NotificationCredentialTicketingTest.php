@@ -109,7 +109,7 @@ class NotificationCredentialTicketingTest extends TestCase
             'email' => 'baru@example.go.id',
             'password' => 'rahasia123',
             'password_confirmation' => 'rahasia123',
-        ])->assertRedirect(route('dashboard'));
+        ])->assertRedirect(route('verification.notice'));
 
         $this->assertSame(1, $admin->refresh()->unreadNotifications()->count());
         $this->assertSame(1, $operator->refresh()->unreadNotifications()->count());

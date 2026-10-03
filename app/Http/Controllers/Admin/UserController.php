@@ -37,6 +37,7 @@ class UserController extends Controller
             'password' => $data['password'],
             'role' => $data['role'],
             'status' => User::STATUS_APPROVED, // dibuat admin → langsung aktif
+            'email_verified_at' => now(),      // dibuat admin → email dianggap terverifikasi
         ]);
 
         return response()->json([
@@ -62,10 +63,13 @@ class UserController extends Controller
             ], 422);
         }
 
+        // Password hanya diganti bila diisi; KOSONG = biarkan semula.
+        // `unset` SELALU dijalankan — jika tidak, 'password' => null ikut fill()
+        // dan menyimpan role menjadi error 500 (Column 'password' cannot be null).
         if (! empty($data['password'])) {
             $user->password = Hash::make($data['password']);
-            unset($data['password']);
         }
+        unset($data['password']);
 
         $user->fill($data)->save();
 
