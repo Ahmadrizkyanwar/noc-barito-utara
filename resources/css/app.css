@@ -11,18 +11,9 @@
     /* Tema NOC — biru pemerintah + aksen status */
     --color-brand-50: #eff6ff;
     --color-brand-100: #dbeafe;
-    --color-brand-200: #bfdbfe;
-    --color-brand-300: #93c5fd;
-    --color-brand-400: #60a5fa;
     --color-brand-500: #3b82f6;
     --color-brand-600: #2563eb;
     --color-brand-700: #1d4ed8;
     --color-brand-800: #1e40af;
     --color-brand-900: #1e3a8a;
-    --color-brand-950: #172554;
-
-    /* Aksen daerah (motif geometris Dayak) — dipakai sebagai ornamen, bukan warna UI */
-    --color-dayak-gold: #d97706;
-    --color-dayak-red: #b91c1c;
-    --color-dayak-cream: #f7f1e6;
 }
