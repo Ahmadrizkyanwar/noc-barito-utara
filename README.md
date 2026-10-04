@@ -147,6 +147,8 @@ Probe ICMP diuji dengan stub deterministik (image test tidak punya binary
 
 Endpoint HTTP lengkap (publik, auth, user, admin/operator, JSON payload,
 validasi, rate limit, integrasi Telegram) ada di **[`docs/API.md`](docs/API.md)**.
+Struktur seluruh tabel database (kolom, tipe, index, relasi) ada di
+**[`docs/DATABASE.md`](docs/DATABASE.md)**.
 
 Ringkas:
 
