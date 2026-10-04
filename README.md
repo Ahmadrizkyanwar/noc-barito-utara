@@ -74,7 +74,7 @@ Login default: `admin@noc.baritoutarakab.go.id` (atau `${WEB_USERNAME}@noc.barit
 composer install && npm install && npm run build
 php artisan migrate --seed
 php artisan serve             # atau: composer run dev
-php artisan test              # 56 tests
+php artisan test              # 158 tests
 ```
 
 ## Konfigurasi Environment
@@ -130,11 +130,27 @@ Cara 1/2 sudah teruji: NPM menjawab benar dengan SNI `kuma.…` dari IP lokal.
 
 ```bash
 php artisan test
-# 56 tests, 198 assertions — auth, guard role, tiket, device, webhook, probe
+# 158 tests, 788 assertions — auth, guard role, tiket, VPS, device, webhook, telegram, probe
 ```
 
 Probe ICMP diuji dengan stub deterministik (image test tidak punya binary
 `ping` + `cap_net_raw`); jalur SNMP fail-closed diuji di image tanpa ekstensi.
+
+## Dokumentasi API
+
+Endpoint HTTP lengkap (publik, auth, user, admin/operator, JSON payload,
+validasi, rate limit, integrasi Telegram) ada di **[`docs/API.md`](docs/API.md)**.
+
+Ringkas:
+
+| Kebutuhan | Endpoint |
+|---|---|
+| Status ringkas (publik, JSON) | `GET /status` |
+| Laporan gangguan | `POST /lapor` |
+| Request VPS | `POST /vps` |
+| Grafik metrik perangkat (JSON) | `GET /admin/jaringan/{id}/metrics?hours=24` |
+| Infografik trafik per interface (JSON) | `GET /admin/jaringan/{id}/interfaces?hours=1` |
+| Uji kirim webhook Telegram | `POST /admin/pengaturan/webhook/{tiket\|jaringan}/test` |
 
 ## Struktur Kode
 
