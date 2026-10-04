@@ -29,6 +29,8 @@ onMounted(() => {
 });
 onUnmounted(() => clearInterval(timer));
 
+const place = 'Muara Teweh · Kalimantan Tengah';
+
 const features = [
     {
         title: 'SNMP v1/v2c/v3',
@@ -63,7 +65,6 @@ const stack = [
     'Telegram Bot API',
     'MariaDB',
     'poll 30 detik',
-    '24/7 observability',
 ];
 
 function uptimeColor(v) {
@@ -83,42 +84,67 @@ function clock(iso) {
 <template>
     <PublicLayout>
         <!-- ══════════ HERO ══════════ -->
-        <section class="hero relative isolate overflow-hidden bg-slate-950 text-white">
-            <div class="hero-grid" aria-hidden="true"></div>
-            <div class="glow glow-a" aria-hidden="true"></div>
-            <div class="glow glow-b" aria-hidden="true"></div>
+        <section class="relative isolate overflow-hidden bg-slate-950 text-white">
+            <!-- Ornamen motif Dayak (pita atas) -->
+            <svg class="motif-band absolute inset-x-0 top-0 h-7 w-full" aria-hidden="true">
+                <defs>
+                    <pattern id="motif-hero" width="56" height="28" patternUnits="userSpaceOnUse">
+                        <path d="M0 28 L14 2 L28 28 L42 2 L56 28" fill="none" stroke="#d97706" stroke-width="1.5" opacity=".85" />
+                        <path d="M14 9 L20 15.5 L14 22 L8 15.5 Z" fill="#b91c1c" />
+                        <path d="M42 9 L48 15.5 L42 22 L36 15.5 Z" fill="#d97706" />
+                        <circle cx="28" cy="9" r="1.8" fill="#f7f1e6" opacity=".8" />
+                    </pattern>
+                </defs>
+                <rect width="100%" height="100%" fill="url(#motif-hero)" />
+            </svg>
 
-            <div class="relative mx-auto grid max-w-6xl gap-12 px-4 py-20 sm:py-24 lg:grid-cols-2 lg:items-center">
+            <div class="hero-grid" aria-hidden="true"></div>
+            <div class="hero-glow" aria-hidden="true"></div>
+
+            <div class="relative mx-auto grid max-w-6xl gap-12 px-4 pb-16 pt-20 sm:pt-24 lg:grid-cols-2 lg:items-center">
                 <div>
-                    <span class="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.2em] text-brand-200 backdrop-blur">
+                    <span class="inline-flex items-center gap-2 rounded-full border border-dayak-gold/40 bg-dayak-gold/10 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.2em] text-dayak-gold">
                         <span class="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400"></span>
                         Network Operation Center
                     </span>
 
-                    <h1 class="mt-5 text-4xl font-black leading-[1.05] tracking-tight sm:text-5xl xl:text-6xl">
+                    <h1 class="mt-5 text-4xl font-black leading-[1.08] tracking-tight sm:text-5xl">
                         Pemantauan Jaringan
-                        <span class="block bg-gradient-to-r from-sky-400 via-brand-400 to-indigo-400 bg-clip-text text-transparent">
-                            Kabupaten Barito Utara
-                        </span>
+                        <span class="block text-brand-300">Kabupaten Barito Utara</span>
                     </h1>
 
-                    <p class="mt-5 max-w-xl text-base leading-relaxed text-slate-300 sm:text-lg">
+                    <!-- Divider motif kecil -->
+                    <svg class="mt-4 h-4 w-40" aria-hidden="true">
+                        <defs>
+                            <pattern id="motif-rule" width="28" height="16" patternUnits="userSpaceOnUse">
+                                <path d="M0 16 L7 3 L14 16 L21 3 L28 16" fill="none" stroke="#d97706" stroke-width="1.5" />
+                                <path d="M7 7 L10.5 10.5 L7 14 L3.5 10.5 Z" fill="#b91c1c" />
+                            </pattern>
+                        </defs>
+                        <rect width="100%" height="100%" fill="url(#motif-rule)" />
+                    </svg>
+
+                    <p class="mt-4 font-mono text-xs uppercase tracking-[0.25em] text-slate-400">
+                        {{ place }}
+                    </p>
+
+                    <p class="mt-5 max-w-xl text-base leading-relaxed text-slate-300">
                         Satu pusat kendali infrastruktur digital Diskominfosandi —
-                        observability real-time SNMP, ICMP, dan RouterOS API, dilengkapi
+                        pemantauan real-time SNMP, ICMP, dan RouterOS API, dilengkapi
                         ticketing gangguan & pendaftaran layanan terintegrasi.
                     </p>
 
                     <div class="mt-8 flex flex-wrap gap-3">
                         <Link
                             :href="route('lapor.index')"
-                            class="group rounded-xl bg-gradient-to-r from-brand-500 to-sky-500 px-6 py-3 text-sm font-bold text-white shadow-lg shadow-brand-600/30 transition hover:from-brand-400 hover:to-sky-400 hover:shadow-brand-500/40"
+                            class="group rounded-xl bg-brand-600 px-6 py-3 text-sm font-bold text-white shadow-lg shadow-black/30 transition hover:bg-brand-500"
                         >
                             Lapor Gangguan
                             <span class="ml-1 inline-block transition group-hover:translate-x-0.5">→</span>
                         </Link>
                         <Link
                             :href="route('login')"
-                            class="rounded-xl border border-white/20 bg-white/5 px-6 py-3 text-sm font-bold text-white backdrop-blur transition hover:border-white/40 hover:bg-white/10"
+                            class="rounded-xl border border-slate-700 bg-slate-900/60 px-6 py-3 text-sm font-bold text-slate-200 transition hover:border-slate-500 hover:text-white"
                         >
                             Masuk ke Dashboard
                         </Link>
@@ -128,7 +154,7 @@ function clock(iso) {
                         <span
                             v-for="s in stack"
                             :key="s"
-                            class="rounded-md border border-white/10 bg-white/5 px-2.5 py-1 font-mono text-[11px] text-slate-300"
+                            class="rounded-md border border-slate-800 bg-slate-900 px-2.5 py-1 font-mono text-[11px] text-slate-400"
                         >
                             {{ s }}
                         </span>
@@ -137,31 +163,30 @@ function clock(iso) {
 
                 <!-- Konsol live (data asli dari /status) -->
                 <div class="relative lg:justify-self-end">
-                    <div class="absolute -inset-4 rounded-3xl bg-gradient-to-tr from-brand-600/20 to-sky-500/20 blur-2xl" aria-hidden="true"></div>
-                    <div class="relative w-full max-w-md rounded-2xl border border-white/10 bg-slate-900/80 shadow-2xl backdrop-blur">
-                        <div class="flex items-center gap-2 border-b border-white/10 px-4 py-3">
-                            <span class="h-2.5 w-2.5 rounded-full bg-red-400/80"></span>
-                            <span class="h-2.5 w-2.5 rounded-full bg-amber-400/80"></span>
-                            <span class="h-2.5 w-2.5 rounded-full bg-emerald-400/80"></span>
-                            <span class="ml-2 font-mono text-[11px] text-slate-400">noc-monitor · live stream</span>
-                            <span class="ml-auto inline-flex items-center gap-1.5 font-mono text-[10px] font-bold text-emerald-400">
-                                <span class="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400"></span>
+                    <div class="w-full max-w-md overflow-hidden rounded-2xl border border-slate-800 bg-slate-900 shadow-2xl shadow-black/40">
+                        <div class="flex items-center gap-2 border-b border-slate-800 bg-slate-950/60 px-4 py-3">
+                            <span class="h-2.5 w-2.5 rounded-full bg-slate-700"></span>
+                            <span class="h-2.5 w-2.5 rounded-full bg-slate-700"></span>
+                            <span class="h-2.5 w-2.5 rounded-full bg-slate-700"></span>
+                            <span class="ml-2 font-mono text-[11px] text-slate-500">noc-monitor · live stream</span>
+                            <span class="ml-auto inline-flex items-center gap-1.5 font-mono text-[10px] font-bold text-emerald-500">
+                                <span class="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500"></span>
                                 ONLINE
                             </span>
                         </div>
                         <div class="space-y-2.5 px-4 py-4 font-mono text-[13px] leading-relaxed">
                             <p class="text-slate-500">$ <span class="text-slate-300">monitor:poll --interval 30s</span></p>
                             <p class="text-slate-400">
-                                perangkat_online <span class="ml-1 font-bold text-emerald-400">{{ live.up }}/{{ live.total }}</span>
+                                perangkat_online <span class="ml-1 font-bold text-emerald-500">{{ live.up }}/{{ live.total }}</span>
                             </p>
                             <p class="text-slate-400">
                                 status_down <span class="ml-1 font-bold text-red-400">{{ live.down }}</span>
                             </p>
                             <p class="text-slate-400">
-                                uptime <span class="ml-1 font-bold text-sky-400">{{ live.uptime_pct === null ? '—' : live.uptime_pct + '%' }}</span>
+                                uptime <span class="ml-1 font-bold text-brand-300">{{ live.uptime_pct === null ? '—' : live.uptime_pct + '%' }}</span>
                             </p>
                             <p class="text-slate-400">
-                                tiket_terbuka <span class="ml-1 font-bold text-amber-400">{{ live.open_tickets }}</span>
+                                tiket_terbuka <span class="ml-1 font-bold text-amber-500">{{ live.open_tickets }}</span>
                             </p>
                             <p class="text-slate-500">last_sync <span class="text-slate-400">{{ clock(live.updated_at) }}</span></p>
                             <p class="text-slate-500">$ <span class="caret">▋</span></p>
@@ -171,12 +196,19 @@ function clock(iso) {
             </div>
 
             <!-- pemisah bawah -->
-            <div class="h-24 bg-gradient-to-b from-transparent to-slate-50" aria-hidden="true"></div>
+            <div class="h-20 bg-gradient-to-b from-transparent to-slate-50" aria-hidden="true"></div>
         </section>
 
         <!-- ══════════ STATUS LIVE ══════════ -->
-        <section class="mx-auto -mt-16 max-w-6xl px-4">
-            <div class="rounded-3xl border border-slate-200/80 bg-white/90 p-6 shadow-xl shadow-slate-900/5 backdrop-blur sm:p-7">
+        <section class="mx-auto -mt-14 max-w-6xl px-4">
+            <div class="relative overflow-hidden rounded-3xl border border-slate-200 bg-white p-6 shadow-xl shadow-slate-900/5 sm:p-7">
+                <!-- ornamen sudut motif -->
+                <svg class="absolute right-0 top-0 h-16 w-16 text-dayak-gold/60" aria-hidden="true" viewBox="0 0 64 64" fill="none">
+                    <path d="M64 0 L64 24 L40 0 Z" fill="currentColor" opacity=".35" />
+                    <path d="M64 32 L64 48 L48 32 Z" fill="currentColor" opacity=".55" />
+                    <path d="M32 0 L48 0 L40 10 Z" fill="#b91c1c" opacity=".4" />
+                </svg>
+
                 <div class="flex flex-wrap items-center justify-between gap-3">
                     <div>
                         <p class="text-xs font-bold uppercase tracking-[0.18em] text-brand-600">Realtime</p>
@@ -189,34 +221,34 @@ function clock(iso) {
                 </div>
 
                 <div class="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-4">
-                    <div class="rounded-2xl border border-slate-100 bg-slate-50/80 p-4 transition hover:border-brand-200 hover:bg-brand-50/50">
+                    <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
                         <div class="flex items-center justify-between">
                             <p class="text-[11px] font-bold uppercase tracking-wide text-slate-500">Perangkat</p>
                             <span class="text-lg">🖧</span>
                         </div>
                         <p class="mt-2 font-mono text-4xl font-black tabular-nums text-slate-900">{{ live.total }}</p>
-                        <p class="mt-1 text-[11px] text-slate-400">terdaftar & aktif dipantau</p>
+                        <p class="mt-1 text-[11px] text-slate-400">terdaftar &amp; aktif dipantau</p>
                     </div>
 
-                    <div class="rounded-2xl border border-emerald-100 bg-emerald-50/70 p-4 transition hover:border-emerald-300">
+                    <div class="rounded-2xl border border-emerald-200/70 bg-emerald-50 p-4">
                         <div class="flex items-center justify-between">
                             <p class="text-[11px] font-bold uppercase tracking-wide text-emerald-700">Online</p>
                             <span class="text-lg">✅</span>
                         </div>
                         <p class="mt-2 font-mono text-4xl font-black tabular-nums text-emerald-700">{{ live.up }}</p>
-                        <p class="mt-1 text-[11px] text-emerald-600/80">menjawab probe terakhir</p>
+                        <p class="mt-1 text-[11px] text-emerald-700/70">menjawab probe terakhir</p>
                     </div>
 
-                    <div class="rounded-2xl border border-red-100 bg-red-50/70 p-4 transition hover:border-red-300">
+                    <div class="rounded-2xl border border-red-200/70 bg-red-50 p-4">
                         <div class="flex items-center justify-between">
                             <p class="text-[11px] font-bold uppercase tracking-wide text-red-700">Gangguan</p>
                             <span class="text-lg">⚠️</span>
                         </div>
                         <p class="mt-2 font-mono text-4xl font-black tabular-nums text-red-700">{{ live.down }}</p>
-                        <p class="mt-1 text-[11px] text-red-600/80">perlu penanganan segera</p>
+                        <p class="mt-1 text-[11px] text-red-700/70">perlu penanganan segera</p>
                     </div>
 
-                    <div class="rounded-2xl border border-slate-100 bg-slate-50/80 p-4 transition hover:border-brand-200 hover:bg-brand-50/50">
+                    <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
                         <div class="flex items-center justify-between">
                             <p class="text-[11px] font-bold uppercase tracking-wide text-slate-500">Uptime</p>
                             <span class="text-lg">📈</span>
@@ -228,7 +260,7 @@ function clock(iso) {
                     </div>
                 </div>
 
-                <div class="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-100 bg-white px-4 py-3">
+                <div class="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
                     <p class="text-sm text-slate-600">
                         Tiket gangguan terbuka:
                         <b class="font-mono text-slate-900">{{ live.open_tickets }}</b>
@@ -245,7 +277,7 @@ function clock(iso) {
                 <h2 class="mt-2 text-2xl font-black tracking-tight text-slate-900 sm:text-3xl">
                     Dibangun untuk operasional jaringan modern
                 </h2>
-                <p class="mt-3 text-sm text-slate-500">
+                <p class="mt-3 text-sm leading-relaxed text-slate-500">
                     Probe berjalan otomatis tiap 30 detik dengan desain fail-closed —
                     satu metode gagal tidak pernah menghentikan pemantauan lainnya.
                 </p>
@@ -255,13 +287,12 @@ function clock(iso) {
                 <div
                     v-for="f in features"
                     :key="f.title"
-                    class="group relative overflow-hidden rounded-2xl border border-slate-200 bg-white p-5 transition duration-300 hover:-translate-y-1 hover:border-brand-300 hover:shadow-xl hover:shadow-brand-500/10"
+                    class="rounded-2xl border border-slate-200 bg-white p-5 transition duration-300 hover:-translate-y-1 hover:border-brand-300 hover:shadow-lg hover:shadow-slate-900/5"
                 >
-                    <div class="absolute -right-8 -top-8 h-24 w-24 rounded-full bg-brand-50 opacity-0 transition group-hover:opacity-100" aria-hidden="true"></div>
-                    <div class="relative flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-brand-500 to-indigo-500 text-xl shadow-lg shadow-brand-500/25">
+                    <div class="flex h-11 w-11 items-center justify-center rounded-xl bg-brand-600 text-xl shadow-md shadow-brand-600/20">
                         {{ f.icon }}
                     </div>
-                    <span class="mt-4 inline-block rounded-md bg-slate-100 px-2 py-0.5 font-mono text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                    <span class="mt-4 inline-block rounded-md bg-dayak-cream px-2 py-0.5 font-mono text-[10px] font-bold uppercase tracking-wider text-dayak-gold">
                         {{ f.tag }}
                     </span>
                     <h3 class="mt-2 font-bold text-slate-900">{{ f.title }}</h3>
@@ -270,10 +301,21 @@ function clock(iso) {
             </div>
         </section>
 
-        <!-- ══════════ CTA ══════════ -->
+        <!-- ══════════ CTA + motif ══════════ -->
         <section class="relative isolate overflow-hidden bg-slate-950">
-            <div class="hero-grid opacity-60" aria-hidden="true"></div>
-            <div class="glow glow-c" aria-hidden="true"></div>
+            <!-- Pita motif Dayak pemisah -->
+            <svg class="motif-band block h-8 w-full" aria-hidden="true">
+                <defs>
+                    <pattern id="motif-cta" width="56" height="32" patternUnits="userSpaceOnUse">
+                        <path d="M0 32 L14 6 L28 32 L42 6 L56 32" fill="none" stroke="#d97706" stroke-width="1.5" opacity=".9" />
+                        <path d="M14 12 L20 18 L14 24 L8 18 Z" fill="#b91c1c" />
+                        <path d="M42 12 L48 18 L42 24 L36 18 Z" fill="#d97706" />
+                        <path d="M28 6 L31 9 L28 12 L25 9 Z" fill="#f7f1e6" opacity=".75" />
+                    </pattern>
+                </defs>
+                <rect width="100%" height="100%" fill="url(#motif-cta)" />
+            </svg>
+
             <div class="relative mx-auto flex max-w-6xl flex-col items-start gap-6 px-4 py-14 sm:py-16 lg:flex-row lg:items-center lg:justify-between">
                 <div>
                     <h2 class="text-2xl font-black tracking-tight text-white sm:text-3xl">
@@ -281,19 +323,19 @@ function clock(iso) {
                     </h2>
                     <p class="mt-2 max-w-xl text-sm text-slate-400">
                         Formulir laporan terbuka untuk umum, tanpa login — lengkapi dengan
-                        lokasi & foto agar penanganan lebih cepat.
+                        lokasi &amp; foto agar penanganan lebih cepat.
                     </p>
                 </div>
                 <div class="flex flex-wrap gap-3">
                     <Link
                         :href="route('lapor.index')"
-                        class="rounded-xl bg-gradient-to-r from-brand-500 to-sky-500 px-6 py-3 text-sm font-bold text-white shadow-lg shadow-brand-600/30 transition hover:from-brand-400 hover:to-sky-400"
+                        class="rounded-xl bg-brand-600 px-6 py-3 text-sm font-bold text-white shadow-lg shadow-black/30 transition hover:bg-brand-500"
                     >
                         Buka Form Lapor →
                     </Link>
                     <Link
                         :href="route('register')"
-                        class="rounded-xl border border-white/20 bg-white/5 px-6 py-3 text-sm font-bold text-white transition hover:border-white/40 hover:bg-white/10"
+                        class="rounded-xl border border-slate-700 bg-slate-900/60 px-6 py-3 text-sm font-bold text-slate-200 transition hover:border-slate-500 hover:text-white"
                     >
                         Daftar Akun
                     </Link>
@@ -327,6 +369,18 @@ function clock(iso) {
                         >
                     </div>
                 </div>
+
+                <!-- Pita motif tipis di atas footer -->
+                <svg class="mt-8 h-5 w-full text-dayak-gold/70" aria-hidden="true">
+                    <defs>
+                        <pattern id="motif-foot" width="36" height="20" patternUnits="userSpaceOnUse">
+                            <path d="M0 20 L9 4 L18 20 L27 4 L36 20" fill="none" stroke="currentColor" stroke-width="1.2" />
+                            <path d="M9 8 L12.5 11.5 L9 15 L5.5 11.5 Z" fill="#b91c1c" opacity=".7" />
+                            <path d="M27 8 L30.5 11.5 L27 15 L23.5 11.5 Z" fill="currentColor" opacity=".7" />
+                        </pattern>
+                    </defs>
+                    <rect width="100%" height="100%" fill="url(#motif-foot)" />
+                </svg>
             </div>
         </section>
     </PublicLayout>
@@ -337,53 +391,28 @@ function clock(iso) {
     position: absolute;
     inset: 0;
     background-image:
-        linear-gradient(to right, rgba(148, 163, 184, 0.09) 1px, transparent 1px),
-        linear-gradient(to bottom, rgba(148, 163, 184, 0.09) 1px, transparent 1px);
+        linear-gradient(to right, rgba(148, 163, 184, 0.06) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(148, 163, 184, 0.06) 1px, transparent 1px);
     background-size: 46px 46px;
     -webkit-mask-image: radial-gradient(ellipse at 50% 30%, #000 30%, transparent 78%);
     mask-image: radial-gradient(ellipse at 50% 30%, #000 30%, transparent 78%);
 }
 
-.glow {
+/* Satu cahaya lembut saja (biru) — tanpa gradasi warna bentrok */
+.hero-glow {
     position: absolute;
-    border-radius: 9999px;
-    filter: blur(90px);
-    opacity: 0.45;
-    animation: drift 14s ease-in-out infinite alternate;
-}
-
-.glow-a {
-    top: -8rem;
-    left: 15%;
-    width: 22rem;
-    height: 22rem;
-    background: radial-gradient(circle, rgba(37, 99, 235, 0.75), transparent 70%);
-}
-
-.glow-b {
-    bottom: -6rem;
-    right: 12%;
-    width: 20rem;
-    height: 20rem;
-    background: radial-gradient(circle, rgba(6, 182, 212, 0.55), transparent 70%);
-    animation-delay: -6s;
-}
-
-.glow-c {
     top: -10rem;
-    right: 20%;
-    width: 24rem;
-    height: 24rem;
-    background: radial-gradient(circle, rgba(79, 70, 229, 0.55), transparent 70%);
+    left: 18%;
+    width: 30rem;
+    height: 30rem;
+    border-radius: 9999px;
+    background: radial-gradient(circle, rgba(37, 99, 235, 0.35), transparent 70%);
+    filter: blur(100px);
+    opacity: 0.5;
 }
 
-@keyframes drift {
-    from {
-        transform: translate3d(0, 0, 0) scale(1);
-    }
-    to {
-        transform: translate3d(2.5rem, 1.5rem, 0) scale(1.12);
-    }
+.motif-band {
+    pointer-events: none;
 }
 
 .caret {

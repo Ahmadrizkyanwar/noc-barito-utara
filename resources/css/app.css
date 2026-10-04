@@ -20,4 +20,9 @@
     --color-brand-800: #1e40af;
     --color-brand-900: #1e3a8a;
     --color-brand-950: #172554;
+
+    /* Aksen daerah (motif geometris Dayak) — dipakai sebagai ornamen, bukan warna UI */
+    --color-dayak-gold: #d97706;
+    --color-dayak-red: #b91c1c;
+    --color-dayak-cream: #f7f1e6;
 }
