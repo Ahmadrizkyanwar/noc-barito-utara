@@ -38,6 +38,10 @@ class VpsReviewController extends Controller
                 $r->credential_file = null;
             }
 
+            if ($r->supporting_document !== null && ! Storage::disk('public')->exists($r->supporting_document)) {
+                $r->supporting_document = null;
+            }
+
             return $r;
         });
 
@@ -45,6 +49,7 @@ class VpsReviewController extends Controller
             'requests' => $requests,
             'statuses' => config('noc.vps_statuses'),
             'ports' => config('noc.vps_ports'),
+            'operatingSystems' => config('noc.vps_operating_systems'),
             'filters' => ['status' => in_array($filter, $statuses, true) ? $filter : ''],
         ]);
     }

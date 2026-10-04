@@ -23,6 +23,7 @@ const props = defineProps({
     statuses: { type: Object, default: () => ({}) },
     vps: { type: Object, default: () => ({}) },
     vpsStatuses: { type: Object, default: () => ({}) },
+    vpsOperatingSystems: { type: Object, default: () => ({}) },
     vpsRequests: { type: Array, default: () => [] },
 });
 
@@ -39,6 +40,7 @@ const statusClass = (s) =>
 
 // Status request VPS (label & warna berbeda dari tiket)
 const vpsStatusLabel = (s) => props.vpsStatuses[s] ?? s;
+const vpsOsLabel = (os) => (os ? (props.vpsOperatingSystems[os] ?? os) : '');
 const vpsStatusClass = (s) =>
     ({
         pending: 'bg-amber-100 text-amber-800',
@@ -777,7 +779,8 @@ watch(() => props.widgets, () => rerender(), { deep: true });
                                             {{ r.instansi }} — {{ r.name }}
                                         </p>
                                         <p class="mt-0.5 text-xs text-slate-500">
-                                            {{ r.cores }} core / {{ r.ram_gb }} GB / {{ r.public_ips }} IP ·
+                                            {{ r.cores }} core / {{ r.ram_gb }} GB / {{ r.public_ips }} IP
+                                            <span v-if="r.os"> · {{ vpsOsLabel(r.os) }}</span> ·
                                             {{ new Date(r.created_at).toLocaleDateString('id-ID') }}
                                         </p>
                                     </div>

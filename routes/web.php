@@ -71,6 +71,9 @@ Route::middleware('auth')->group(function () {
     // Unduh kredensial (pemilik request ATAU reviewer)
     Route::get('/vps/{vpsRequest}/credentials', [VpsRequestController::class, 'credentials'])
         ->name('vps.credentials');
+    // Unduh dokumen pendukung dari user (pemilik request ATAU reviewer)
+    Route::get('/vps/{vpsRequest}/document', [VpsRequestController::class, 'document'])
+        ->name('vps.document');
 
     // Lonceng notifikasi
     Route::post('/notifications/{notification}/read', [NotificationController::class, 'read'])

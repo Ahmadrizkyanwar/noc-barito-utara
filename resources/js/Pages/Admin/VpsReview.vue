@@ -7,6 +7,7 @@ const props = defineProps({
     requests: { type: Object, required: true },
     statuses: { type: Object, required: true },
     ports: { type: Object, required: true },
+    operatingSystems: { type: Object, required: true },
     filters: { type: Object, required: true },
 });
 
@@ -74,6 +75,7 @@ function statusClass(s) {
 
 const fmtDate = (d) => new Date(d).toLocaleString('id-ID');
 const portLabel = (key) => (props.ports[key] ? `${key} · ${props.ports[key]}` : key);
+const osLabel = (key) => props.operatingSystems[key] ?? key ?? '—';
 </script>
 
 <template>
@@ -122,6 +124,7 @@ const portLabel = (key) => (props.ports[key] ? `${key} · ${props.ports[key]}` :
                         <p class="mt-0.5 text-xs text-slate-500">
                             NIP {{ r.nip }} · {{ r.jabatan }} ·
                             {{ r.cores }} core / {{ r.ram_gb }} GB / {{ r.public_ips }} IP publik
+                            <span v-if="r.os"> · {{ osLabel(r.os) }}</span>
                             · {{ fmtDate(r.created_at) }}
                         </p>
                     </div>
@@ -144,7 +147,18 @@ const portLabel = (key) => (props.ports[key] ? `${key} · ${props.ports[key]}` :
                                     :key="p"
                                     class="mr-1 mb-1 inline-block rounded bg-slate-100 px-2 py-0.5 font-mono text-xs"
                                 >{{ portLabel(p) }}</span>
+                                <span
+                                    v-if="r.custom_ports"
+                                    class="mr-1 mb-1 inline-block rounded bg-indigo-50 px-2 py-0.5 font-mono text-xs text-indigo-700"
+                                >
+                                    tambahan: {{ r.custom_ports }}
+                                </span>
+                                <span v-if="!r.ports?.length && !r.custom_ports" class="text-sm text-slate-400">—</span>
                             </p>
+                        </div>
+                        <div>
+                            <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Sistem Operasi</p>
+                            <p class="mt-1 text-sm text-slate-700">{{ osLabel(r.os) }}</p>
                         </div>
                         <div>
                             <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Reviewer</p>
@@ -160,6 +174,25 @@ const portLabel = (key) => (props.ports[key] ? `${key} · ${props.ports[key]}` :
                     <div class="mt-3">
                         <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Penggunaan Untuk</p>
                         <p class="mt-1 whitespace-pre-wrap text-sm text-slate-700">{{ r.purpose }}</p>
+                    </div>
+
+                    <!-- Dokumen pendukung dari user -->
+                    <div v-if="r.supporting_document" class="mt-3">
+                        <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Dokumen Pendukung</p>
+                        <div class="mt-1 flex flex-wrap items-center gap-3 rounded-lg bg-slate-50 px-3 py-2">
+                            <span class="text-sm text-slate-700">
+                                📎 Terunggah
+                                <span v-if="r.supporting_document_uploaded_at" class="text-slate-500">
+                                    · {{ fmtDate(r.supporting_document_uploaded_at) }}
+                                </span>
+                            </span>
+                            <a
+                                :href="route('vps.document', r.id)"
+                                class="text-sm font-semibold text-brand-700 hover:underline"
+                            >
+                                Unduh ↓
+                            </a>
+                        </div>
                     </div>
 
                     <!-- Aksi (hanya pending) -->

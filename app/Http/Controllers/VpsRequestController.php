@@ -28,6 +28,7 @@ class VpsRequestController extends Controller
             'canRequest' => $user->canRequestVps(),
             'accountStatus' => $user->status,
             'ports' => config('noc.vps_ports'),
+            'operatingSystems' => config('noc.vps_operating_systems'),
         ]);
     }
 
@@ -46,10 +47,26 @@ class VpsRequestController extends Controller
             'cores' => ['required', 'integer', 'between:1,256'],
             'ram_gb' => ['required', 'integer', 'between:1,1024'],
             'public_ips' => ['required', 'integer', 'between:1,16'],
-            'ports' => ['required', 'array', 'min:1'],
+            'os' => ['required', 'string', Rule::in(array_keys(config('noc.vps_operating_systems')))],
+            'ports' => ['required_without:custom_ports', 'array'],
             'ports.*' => ['string', Rule::in(array_keys(config('noc.vps_ports')))],
+            'custom_ports' => ['nullable', 'string', 'max:255', 'regex:/^$|^\d{1,5}(\s*-\s*\d{1,5})?(\s*,\s*\d{1,5}(\s*-\s*\d{1,5})?)*$/'],
             'purpose' => ['required', 'string', 'max:1000'],
+            'supporting_document' => ['nullable', 'file', 'mimes:pdf,doc,docx,jpg,jpeg,png', 'max:5120'],
+        ], [
+            'os.in' => 'Sistem operasi tidak dikenal.',
+            'custom_ports.regex' => 'Format service port tambahan tidak valid — gunakan angka/rentang dipisah koma, contoh: 8443, 9090, 3000-3100.',
+            'supporting_document.mimes' => 'Dokumen pendukung harus berformat PDF, DOC, DOCX, JPG, atau PNG.',
         ]);
+
+        // Minimal satu service port: pilihan di daftar ATAU isian bebas.
+        $data['ports'] = $data['ports'] ?? [];
+
+        if ($request->hasFile('supporting_document')) {
+            $data['supporting_document'] = $request->file('supporting_document')
+                ->store('uploads/vps/documents', 'public');
+            $data['supporting_document_uploaded_at'] = now();
+        }
 
         $data['code'] = $this->nextVpsCode();
 
@@ -68,18 +85,58 @@ class VpsRequestController extends Controller
      */
     public function credentials(Request $request, VpsRequest $vpsRequest)
     {
-        $user = $request->user();
-
-        if ($vpsRequest->user_id !== $user->id && ! $user->canReview()) {
-            abort(403);
-        }
+        $this->authorizeOwnerOrReviewer($request, $vpsRequest);
 
         if ($vpsRequest->credential_file === null) {
             abort(404);
         }
 
+        $ext = strtolower(pathinfo($vpsRequest->credential_file, PATHINFO_EXTENSION));
+
+        return $this->downloadPublicFile(
+            $vpsRequest->credential_file,
+            'kredensial-'.$vpsRequest->code.($ext !== '' ? '.'.$ext : '')
+        );
+    }
+
+    /**
+     * Unduh dokumen pendukung yang diunggah user — pemilik request ATAU reviewer.
+     */
+    public function document(Request $request, VpsRequest $vpsRequest)
+    {
+        $this->authorizeOwnerOrReviewer($request, $vpsRequest);
+
+        if ($vpsRequest->supporting_document === null) {
+            abort(404);
+        }
+
+        $ext = strtolower(pathinfo($vpsRequest->supporting_document, PATHINFO_EXTENSION));
+
+        return $this->downloadPublicFile(
+            $vpsRequest->supporting_document,
+            'dokumen-pendukung-'.$vpsRequest->code.($ext !== '' ? '.'.$ext : '')
+        );
+    }
+
+    /**
+     * Guard: hanya pemilik request atau reviewer (admin/operator).
+     */
+    protected function authorizeOwnerOrReviewer(Request $request, VpsRequest $vpsRequest): void
+    {
+        $user = $request->user();
+
+        if ($vpsRequest->user_id !== $user->id && ! $user->canReview()) {
+            abort(403);
+        }
+    }
+
+    /**
+     * Unduh berkas dari disk `public` dengan guard path-traversal.
+     */
+    protected function downloadPublicFile(string $path, string $filename)
+    {
         $base = realpath(Storage::disk('public')->path(''));
-        $target = realpath(Storage::disk('public')->path($vpsRequest->credential_file));
+        $target = realpath(Storage::disk('public')->path($path));
 
         if ($base === false || $target === false
             || ! str_starts_with($target, $base.DIRECTORY_SEPARATOR)
@@ -87,9 +144,7 @@ class VpsRequestController extends Controller
             abort(404);
         }
 
-        $ext = strtolower(pathinfo($vpsRequest->credential_file, PATHINFO_EXTENSION));
-
-        return response()->download($target, 'kredensial-'.$vpsRequest->code.($ext !== '' ? '.'.$ext : ''));
+        return response()->download($target, $filename);
     }
 
     /**

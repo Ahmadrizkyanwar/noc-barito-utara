@@ -89,6 +89,19 @@ return [
         '20000-20100' => 'Passive FTP',
     ],
 
+    // Opsi dropdown "Pilihan Sistem Operasi" pada form request VPS
+    // (key = nilai yang disimpan, label = tampilan di form).
+    'vps_operating_systems' => [
+        'debian-12' => 'Debian 12',
+        'ubuntu-2404' => 'Ubuntu 24.04 LTS',
+        'ubuntu-2204' => 'Ubuntu 22.04 LTS',
+        'rocky-9' => 'Rocky Linux 9',
+        'almalinux-9' => 'AlmaLinux 9',
+        'centos-stream-9' => 'CentOS Stream 9',
+        'windows-server-2022' => 'Windows Server 2022',
+        'lainnya' => 'Lainnya',
+    ],
+
     'vps_statuses' => [
         'pending' => 'Menunggu Review',
         'approved' => 'Disetujui',

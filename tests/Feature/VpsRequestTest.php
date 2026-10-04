@@ -6,6 +6,8 @@ use App\Models\User;
 use App\Models\VpsRequest;
 use Database\Seeders\DatabaseSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 /**
@@ -30,6 +32,7 @@ class VpsRequestTest extends TestCase
             'cores' => 4,
             'ram_gb' => 8,
             'public_ips' => 2,
+            'os' => 'ubuntu-2404',
             'ports' => ['22', '443', '80'],
             'purpose' => 'Portal e-learning instansi.',
         ];
@@ -92,8 +95,114 @@ class VpsRequestTest extends TestCase
         $this->assertSame(4, $row->cores);
         $this->assertSame(8, $row->ram_gb);
         $this->assertSame(2, $row->public_ips);
+        $this->assertSame('ubuntu-2404', $row->os);
         $this->assertSame(['22', '443', '80'], $row->ports);
         $this->assertSame(VpsRequest::STATUS_PENDING, $row->status);
+    }
+
+    public function test_store_rejects_unknown_os(): void
+    {
+        $payload = $this->validPayload();
+        $payload['os'] = 'ms-dos';
+
+        $this->actingAs($this->approvedUser())
+            ->from('/vps')
+            ->post('/vps', $payload)
+            ->assertSessionHasErrors('os');
+
+        $this->assertDatabaseCount('vps_requests', 0);
+    }
+
+    public function test_store_accepts_custom_service_ports(): void
+    {
+        $user = $this->approvedUser();
+        $payload = $this->validPayload();
+        $payload['custom_ports'] = '8443, 9090, 3000-3100';
+
+        $this->actingAs($user)
+            ->post('/vps', $payload)
+            ->assertRedirect(route('vps.index'))
+            ->assertSessionHas('success');
+
+        $this->assertSame('8443, 9090, 3000-3100', VpsRequest::first()->custom_ports);
+    }
+
+    public function test_store_rejects_invalid_custom_service_ports(): void
+    {
+        $payload = $this->validPayload();
+        $payload['custom_ports'] = 'port-tua, 8080';
+
+        $this->actingAs($this->approvedUser())
+            ->from('/vps')
+            ->post('/vps', $payload)
+            ->assertSessionHasErrors('custom_ports');
+
+        $this->assertDatabaseCount('vps_requests', 0);
+    }
+
+    public function test_store_accepts_only_custom_service_ports(): void
+    {
+        $user = $this->approvedUser();
+        $payload = $this->validPayload();
+        $payload['ports'] = [];
+        $payload['custom_ports'] = '8443, 9090';
+
+        $this->actingAs($user)
+            ->post('/vps', $payload)
+            ->assertRedirect(route('vps.index'))
+            ->assertSessionHas('success');
+
+        $row = VpsRequest::first();
+        $this->assertSame([], $row->ports);
+        $this->assertSame('8443, 9090', $row->custom_ports);
+    }
+
+    public function test_store_accepts_supporting_document_and_owner_can_download_it(): void
+    {
+        Storage::fake('public');
+
+        $user = $this->approvedUser();
+        $stranger = User::factory()->create();
+        $png = base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==');
+
+        $payload = $this->validPayload();
+        $payload['supporting_document'] = UploadedFile::fake()->createWithContent('surat.png', $png);
+
+        $this->actingAs($user)
+            ->post('/vps', $payload)
+            ->assertRedirect(route('vps.index'))
+            ->assertSessionHas('success');
+
+        $row = VpsRequest::first();
+        $this->assertNotNull($row->supporting_document);
+        $this->assertNotNull($row->supporting_document_uploaded_at);
+        Storage::disk('public')->assertExists($row->supporting_document);
+
+        // Pemilik boleh unduh
+        $this->actingAs($user)
+            ->get(route('vps.document', $row))
+            ->assertOk()
+            ->assertDownload('dokumen-pendukung-'.$row->code.'.png');
+
+        // User lain ditolak
+        $this->actingAs($stranger)
+            ->get(route('vps.document', $row))
+            ->assertForbidden();
+    }
+
+    public function test_store_rejects_unsupported_supporting_document(): void
+    {
+        Storage::fake('public');
+
+        $payload = $this->validPayload();
+        $payload['supporting_document'] = UploadedFile::fake()->createWithContent('script.php', '<?php echo 1;');
+
+        $this->actingAs($this->approvedUser())
+            ->from('/vps')
+            ->post('/vps', $payload)
+            ->assertSessionHasErrors('supporting_document');
+
+        $this->assertDatabaseCount('vps_requests', 0);
     }
 
     public function test_store_validates_required_fields(): void
@@ -103,7 +212,7 @@ class VpsRequestTest extends TestCase
             ->post('/vps', ['name' => ''])
             ->assertSessionHasErrors([
                 'name', 'nip', 'jabatan', 'instansi',
-                'cores', 'ram_gb', 'public_ips', 'ports', 'purpose',
+                'cores', 'ram_gb', 'public_ips', 'os', 'ports', 'purpose',
             ]);
 
         $this->assertDatabaseCount('vps_requests', 0);

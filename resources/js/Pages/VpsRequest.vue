@@ -1,12 +1,13 @@
 <script setup>
 import UserLayout from '@/Layouts/UserLayout.vue';
 import { Link, useForm, usePage } from '@inertiajs/vue3';
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 
 const props = defineProps({
     canRequest: { type: Boolean, required: true },
     accountStatus: { type: String, required: true },
     ports: { type: Object, required: true },
+    operatingSystems: { type: Object, required: true },
 });
 
 const auth = computed(() => usePage().props.auth?.user);
@@ -19,9 +20,27 @@ const form = useForm({
     cores: 2,
     ram_gb: 4,
     public_ips: 1,
+    os: '',
     ports: ['22', '443'],
+    custom_ports: '',
     purpose: '',
+    supporting_document: null,
 });
+
+const docInput = ref(null);
+const docName = ref('');
+
+function onDocChange(e) {
+    const file = e.target.files?.[0] ?? null;
+    form.supporting_document = file;
+    docName.value = file ? file.name : '';
+}
+
+function clearDoc() {
+    form.supporting_document = null;
+    docName.value = '';
+    if (docInput.value) docInput.value.value = '';
+}
 
 const accountLabel = computed(
     () =>
@@ -41,7 +60,10 @@ function togglePort(key) {
 function submit() {
     form.post(route('vps.store'), {
         preserveScroll: true,
-        onSuccess: () => form.reset('nip', 'jabatan', 'instansi', 'purpose'),
+        onSuccess: () => {
+            form.reset('nip', 'jabatan', 'instansi', 'purpose', 'custom_ports');
+            clearDoc();
+        },
     });
 }
 
@@ -203,12 +225,31 @@ function statusClass(s) {
                     >
                     <p v-if="form.errors.public_ips" class="mt-1 text-xs text-red-600">{{ form.errors.public_ips }}</p>
                 </div>
+
+                <div>
+                    <label for="vps-os" class="block text-sm font-semibold">Pilihan Sistem Operasi *</label>
+                    <select
+                        id="vps-os"
+                        v-model="form.os"
+                        required
+                        class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-brand-600 focus:outline-none"
+                        :class="{ 'border-red-400': form.errors.os }"
+                    >
+                        <option value="" disabled>Pilih sistem operasi…</option>
+                        <option v-for="(label, key) in operatingSystems" :key="key" :value="key">
+                            {{ label }}
+                        </option>
+                    </select>
+                    <p v-if="form.errors.os" class="mt-1 text-xs text-red-600">{{ form.errors.os }}</p>
+                </div>
             </div>
 
             <!-- Service PORT -->
             <div class="mt-4">
-                <span class="block text-sm font-semibold">Service PORT yang dibuka *</span>
-                <p class="mt-0.5 text-xs text-slate-500">Pilih minimal satu layanan.</p>
+                <span class="block text-sm font-semibold">Service PORT yang dibuka</span>
+                <p class="mt-0.5 text-xs text-slate-500">
+                    Pilih minimal satu layanan di daftar, atau isi service port tambahan di bawah.
+                </p>
                 <div class="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3">
                     <label
                         v-for="(label, key) in ports"
@@ -228,6 +269,23 @@ function statusClass(s) {
                 </div>
                 <p v-if="form.errors.ports" class="mt-1 text-xs text-red-600">{{ form.errors.ports }}</p>
                 <p v-if="form.errors['ports.0']" class="mt-1 text-xs text-red-600">{{ form.errors['ports.0'] }}</p>
+
+                <div class="mt-3">
+                    <label for="vps-custom-ports" class="block text-sm font-semibold">Service Port tambahan (opsional)</label>
+                    <p class="mt-0.5 text-xs text-slate-500">
+                        Isi port di luar daftar di atas, gunakan angka atau rentang dipisah koma.
+                    </p>
+                    <input
+                        id="vps-custom-ports"
+                        v-model.trim="form.custom_ports"
+                        type="text"
+                        maxlength="255"
+                        placeholder="Contoh: 8443, 9090, 3000-3100"
+                        class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-brand-600 focus:outline-none"
+                        :class="{ 'border-red-400': form.errors.custom_ports }"
+                    >
+                    <p v-if="form.errors.custom_ports" class="mt-1 text-xs text-red-600">{{ form.errors.custom_ports }}</p>
+                </div>
             </div>
 
             <div class="mt-4">
@@ -243,6 +301,36 @@ function statusClass(s) {
                     :class="{ 'border-red-400': form.errors.purpose }"
                 ></textarea>
                 <p v-if="form.errors.purpose" class="mt-1 text-xs text-red-600">{{ form.errors.purpose }}</p>
+            </div>
+
+            <!-- Dokumen pendukung -->
+            <div class="mt-4">
+                <label for="vps-doc" class="block text-sm font-semibold">Dokumen Pendukung (opsional)</label>
+                <p class="mt-0.5 text-xs text-slate-500">
+                    Surat permohonan / pendukung lain — PDF, DOC, DOCX, JPG, atau PNG, maks 5 MB.
+                </p>
+                <div class="mt-1 flex flex-wrap items-center gap-2">
+                    <input
+                        id="vps-doc"
+                        ref="docInput"
+                        type="file"
+                        accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                        class="text-sm"
+                        @change="onDocChange"
+                    >
+                    <button
+                        v-if="docName"
+                        type="button"
+                        class="rounded-lg border border-slate-300 px-2 py-1 text-xs font-semibold text-slate-500 hover:bg-slate-50"
+                        @click="clearDoc"
+                    >
+                        Hapus ✕
+                    </button>
+                </div>
+                <p v-if="docName" class="mt-1 text-xs text-slate-600">📎 {{ docName }}</p>
+                <p v-if="form.errors.supporting_document" class="mt-1 text-xs text-red-600">
+                    {{ form.errors.supporting_document }}
+                </p>
             </div>
 
             <button

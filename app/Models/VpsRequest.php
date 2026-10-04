@@ -27,8 +27,12 @@ class VpsRequest extends Model
         'cores',
         'ram_gb',
         'public_ips',
+        'os',
         'ports',
+        'custom_ports',
         'purpose',
+        'supporting_document',
+        'supporting_document_uploaded_at',
         'status',
         'admin_note',
         'reviewed_by',
@@ -43,6 +47,7 @@ class VpsRequest extends Model
             'ports' => 'array',
             'reviewed_at' => 'datetime',
             'credential_uploaded_at' => 'datetime',
+            'supporting_document_uploaded_at' => 'datetime',
             'cores' => 'integer',
             'ram_gb' => 'integer',
             'public_ips' => 'integer',
@@ -72,5 +77,10 @@ class VpsRequest extends Model
     public function hasCredentials(): bool
     {
         return $this->credential_file !== null;
+    }
+
+    public function hasSupportingDocument(): bool
+    {
+        return $this->supporting_document !== null;
     }
 }

@@ -31,6 +31,7 @@ class NotificationCredentialTicketingTest extends TestCase
             'cores' => 4,
             'ram_gb' => 8,
             'public_ips' => 2,
+            'os' => 'debian-12',
             'ports' => ['22', '443'],
             'purpose' => 'Portal e-learning instansi.',
         ];

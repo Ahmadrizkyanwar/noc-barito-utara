@@ -284,11 +284,12 @@ class DashboardController extends Controller
                 'pending' => $request->user()->vpsRequests()->where('status', VpsRequest::STATUS_PENDING)->count(),
             ],
             'vpsStatuses' => config('noc.vps_statuses'),
+            'vpsOperatingSystems' => config('noc.vps_operating_systems'),
             'vpsRequests' => $request->user()->vpsRequests()
                 ->latest()
                 ->take(5)
                 ->get([
-                    'id', 'code', 'name', 'instansi', 'cores', 'ram_gb', 'public_ips',
+                    'id', 'code', 'name', 'instansi', 'cores', 'ram_gb', 'public_ips', 'os',
                     'purpose', 'status', 'admin_note', 'credential_file', 'created_at',
                 ])
                 ->map(function (VpsRequest $r) {
