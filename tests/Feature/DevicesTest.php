@@ -266,6 +266,18 @@ class DevicesTest extends TestCase
         Http::assertNothingSent();
     }
 
+    /** Form UI (Inertia) → wajib redirect, bukan JSON. */
+    public function test_device_destroy_redirects_for_inertia_style_request(): void
+    {
+        $device = $this->makeDevice();
+
+        $this->actingAs($this->admin())
+            ->delete('/admin/jaringan/'.$device->id)
+            ->assertRedirect();
+
+        $this->assertDatabaseMissing('devices', ['id' => $device->id]);
+    }
+
     protected function poller(): MonitorPoller
     {
         // Resolve dari container → fakeIcmp() (app()->instance) ikut terpakai.

@@ -2,6 +2,7 @@
 import NotificationBell from '@/Components/NotificationBell.vue';
 import { Link, usePage } from '@inertiajs/vue3';
 import { computed } from 'vue';
+import logo from '@/images/noc-logo-colored.png';
 
 const page = usePage();
 const auth = computed(() => page.props.auth?.user);
@@ -13,7 +14,7 @@ const flash = computed(() => page.props.flash);
         <header class="sticky top-0 z-40 border-b border-slate-200 bg-white">
             <div class="mx-auto flex h-16 max-w-5xl items-center justify-between px-4">
                 <Link :href="route('landing')" class="flex items-center gap-3">
-                    <img src="/noc-logo.png" alt="NOC" class="h-9 w-9 rounded" @error="$event.target.style.display='none'">
+                    <img :src="logo" alt="NOC" class="h-9 w-9 rounded" @error="$event.target.style.display='none'">
                     <span class="text-sm font-bold leading-tight">
                         NOC Kabupaten Barito Utara
                         <span class="block text-[11px] font-medium text-slate-500">Dashboard Pengguna</span>

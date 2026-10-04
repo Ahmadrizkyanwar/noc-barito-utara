@@ -219,7 +219,7 @@ class RegistrationTest extends TestCase
         $admin = User::factory()->admin()->create();
 
         $this->actingAs($admin)
-            ->post('/admin/pengaturan/user', [
+            ->postJson('/admin/pengaturan/user', [
                 'name' => 'Operator Satu',
                 'email' => 'op1@example.go.id',
                 'password' => 'rahasia123',
@@ -255,7 +255,7 @@ class RegistrationTest extends TestCase
         $oldHash = $user->password;
 
         $this->actingAs($admin)
-            ->put('/admin/pengaturan/user/'.$user->id, [
+            ->putJson('/admin/pengaturan/user/'.$user->id, [
                 'name' => $user->name,
                 'email' => $user->email,
                 'password' => '',
@@ -268,5 +268,18 @@ class RegistrationTest extends TestCase
         $this->assertSame(User::ROLE_OPERATOR, $fresh->role);
         $this->assertSame($oldHash, $fresh->password); // password tidak diubah
         $this->assertNotNull($fresh->password);
+    }
+
+    /** Form UI (Inertia) → wajib redirect, bukan JSON. */
+    public function test_update_role_redirects_for_inertia_style_request(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $user = User::factory()->create(['role' => User::ROLE_USER]);
+
+        $this->actingAs($admin)
+            ->put('/admin/pengaturan/user/'.$user->id, ['role' => User::ROLE_OPERATOR])
+            ->assertRedirect();
+
+        $this->assertSame(User::ROLE_OPERATOR, $user->fresh()->role);
     }
 }

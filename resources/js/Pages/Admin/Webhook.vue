@@ -1,7 +1,7 @@
 <script setup>
 import AdminLayout from '@/Layouts/AdminLayout.vue';
-import { router, useForm } from '@inertiajs/vue3';
-import { reactive, ref } from 'vue';
+import { useForm } from '@inertiajs/vue3';
+import { onUnmounted, reactive } from 'vue';
 
 const props = defineProps({
     webhooks: { type: Array, required: true },
@@ -10,6 +10,7 @@ const props = defineProps({
 const forms = reactive({});
 const testing = reactive({});
 const messages = reactive({});
+const timers = {};
 
 for (const wh of props.webhooks) {
     forms[wh.id] = useForm({
@@ -19,11 +20,21 @@ for (const wh of props.webhooks) {
     });
 }
 
+/** Notifikasi per kartu — sukses otomatis hilang, error tetap sampai ditutup. */
+function flash(id, ok, text) {
+    messages[id] = { ok, text };
+    clearTimeout(timers[id]);
+    if (ok) {
+        timers[id] = setTimeout(() => (messages[id] = null), 4000);
+    }
+}
+
 function save(id) {
     messages[id] = null;
     forms[id].put(route('admin.webhooks.update', id), {
         preserveScroll: true,
-        onSuccess: () => (messages[id] = { ok: true, text: 'Tersimpan.' }),
+        onSuccess: () => flash(id, true, 'Pengaturan tersimpan.'),
+        onError: () => flash(id, false, 'Gagal menyimpan — periksa isian form.'),
     });
 }
 
@@ -40,15 +51,19 @@ async function test(id) {
             },
         });
         const data = await res.json();
-        messages[id] = data.ok
-            ? { ok: true, text: 'Pesan terkirim ke Telegram ✓' }
-            : { ok: false, text: data.error ?? 'Gagal mengirim.' };
-    } catch (e) {
-        messages[id] = { ok: false, text: 'Gagal mengirim (jaringan).' };
+        if (data.ok) {
+            flash(id, true, 'Pesan terkirim ke Telegram ✓');
+        } else {
+            flash(id, false, data.error ?? 'Gagal mengirim pesan.');
+        }
+    } catch {
+        flash(id, false, 'Gagal mengirim — periksa koneksi jaringan.');
     } finally {
         testing[id] = false;
     }
 }
+
+onUnmounted(() => Object.values(timers).forEach(clearTimeout));
 </script>
 
 <template>
@@ -119,13 +134,34 @@ async function test(id) {
                     </button>
                 </div>
 
-                <p
-                    v-if="messages[wh.id]"
-                    class="mt-3 rounded-lg px-3 py-2 text-sm"
-                    :class="messages[wh.id].ok ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700'"
+                <Transition
+                    enter-active-class="transition duration-200 ease-out"
+                    enter-from-class="opacity-0 -translate-y-1"
+                    enter-to-class="opacity-100 translate-y-0"
+                    leave-active-class="transition duration-150 ease-in"
+                    leave-from-class="opacity-100"
+                    leave-to-class="opacity-0"
                 >
-                    {{ messages[wh.id].text }}
-                </p>
+                    <div
+                        v-if="messages[wh.id]"
+                        class="mt-3 flex items-start gap-2 rounded-lg border px-3 py-2.5 text-sm shadow-sm"
+                        :class="messages[wh.id].ok
+                            ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
+                            : 'border-red-200 bg-red-50 text-red-700'"
+                        role="status"
+                    >
+                        <span class="mt-px leading-none">{{ messages[wh.id].ok ? '✅' : '⚠️' }}</span>
+                        <span class="flex-1 leading-snug">{{ messages[wh.id].text }}</span>
+                        <button
+                            type="button"
+                            class="shrink-0 rounded p-0.5 leading-none opacity-50 hover:opacity-100"
+                            aria-label="Tutup notifikasi"
+                            @click="messages[wh.id] = null"
+                        >
+                            ✕
+                        </button>
+                    </div>
+                </Transition>
             </div>
         </div>
     </AdminLayout>

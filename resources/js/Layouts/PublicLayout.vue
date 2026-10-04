@@ -2,6 +2,7 @@
 import NotificationBell from '@/Components/NotificationBell.vue';
 import { Link, usePage } from '@inertiajs/vue3';
 import { computed } from 'vue';
+import logo from '@/images/noc-logo-colored.png';
 
 const page = usePage();
 const auth = computed(() => page.props.auth?.user);
@@ -14,7 +15,7 @@ const flash = computed(() => page.props.flash);
         <header class="sticky top-0 z-40 border-b border-slate-200 bg-white/90 backdrop-blur">
             <div class="mx-auto flex h-16 max-w-6xl items-center justify-between px-4">
                 <Link :href="route('landing')" class="flex items-center gap-3">
-                    <img src="/noc-logo.png" alt="NOC" class="h-9 w-9 rounded" @error="$event.target.style.display='none'">
+                    <img :src="logo" alt="NOC" class="h-9 w-9 rounded" @error="$event.target.style.display='none'">
                     <span class="text-sm font-bold leading-tight">
                         NOC Kabupaten Barito Utara
                         <span class="block text-[11px] font-medium text-slate-500">Diskominfosandi</span>
@@ -70,10 +71,13 @@ const flash = computed(() => page.props.flash);
             <slot />
         </main>
 
+        <!-- Footer -->
         <footer class="border-t border-slate-200 bg-white">
-            <div class="mx-auto flex max-w-6xl flex-col gap-1 px-4 py-6 text-xs text-slate-500 sm:flex-row sm:items-center sm:justify-between">
-                <p>© {{ new Date().getFullYear() }} Diskominfosandi Kabupaten Barito Utara — Network Operation Center</p>
-                <p>Pemantauan jaringan: SNMP · ICMP · RouterOS API</p>
+            <div class="mx-auto max-w-6xl px-4 py-6">
+                <div class="flex flex-col items-center gap-1 text-center text-xs text-slate-500">
+                    <p>© {{ new Date().getFullYear() }} Diskominfosandi Kabupaten Barito Utara — Network Operation Center</p>
+                    <p>Pemantauan jaringan: SNMP · ICMP · RouterOS API</p>
+                </div>
             </div>
         </footer>
     </div>

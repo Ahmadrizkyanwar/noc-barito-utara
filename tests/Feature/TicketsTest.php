@@ -235,6 +235,25 @@ class TicketsTest extends TestCase
                 ->has('devices'));
     }
 
+    /** Form UI (Inertia) → wajib redirect, bukan JSON. */
+    public function test_status_update_redirects_for_inertia_style_request(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $ticket = Ticket::create([
+            'code' => 'TKT-20261003-9001',
+            'title' => 'Uji Inertia',
+            'category' => 'Jaringan',
+            'description' => 'Uji redirect',
+            'status' => 'open',
+        ]);
+
+        $this->actingAs($admin)
+            ->patch('/admin/layanan/'.$ticket->id.'/status', ['status' => 'proses'])
+            ->assertRedirect();
+
+        $this->assertDatabaseHas('tickets', ['id' => $ticket->id, 'status' => 'proses']);
+    }
+
     /**
      * @return array<string, mixed>
      */

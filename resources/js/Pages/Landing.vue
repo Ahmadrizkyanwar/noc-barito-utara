@@ -2,6 +2,7 @@
 import PublicLayout from '@/Layouts/PublicLayout.vue';
 import { Link, router } from '@inertiajs/vue3';
 import { onMounted, onUnmounted, ref } from 'vue';
+import nocBanner from '@/images/noc-logo-banner.png';
 
 const props = defineProps({
     status: { type: Object, required: true },
@@ -158,6 +159,13 @@ function uptimeColor(v) {
                     <div class="text-sm text-slate-600 sm:text-right">
                         <p class="font-semibold">Metode Pemantauan</p>
                         <p class="mt-1 text-slate-500">SNMP · ICMP · RouterOS API — interval 30 detik</p>
+                        <!-- Logo NOC tepat di bawah Metode Pemantauan -->
+                        <img
+                            :src="nocBanner"
+                            alt="NOC — Network Operation Center"
+                            class="mt-4 h-10 w-auto sm:ml-auto"
+                            @error="$event.target.style.display='none'"
+                        >
                     </div>
                 </div>
             </div>

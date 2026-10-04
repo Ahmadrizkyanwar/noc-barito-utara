@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
@@ -22,7 +23,7 @@ class UserController extends Controller
         ]);
     }
 
-    public function store(Request $request): JsonResponse
+    public function store(Request $request): JsonResponse|RedirectResponse
     {
         $data = $request->validate([
             'name' => ['required', 'string', 'max:100'],
@@ -40,13 +41,19 @@ class UserController extends Controller
             'email_verified_at' => now(),      // dibuat admin → email dianggap terverifikasi
         ]);
 
-        return response()->json([
-            'ok' => true,
-            'user' => $user->only(['id', 'name', 'email', 'role']),
-        ], 201);
+        if ($request->expectsJson()) {
+            return response()->json([
+                'ok' => true,
+                'user' => $user->only(['id', 'name', 'email', 'role']),
+            ], 201);
+        }
+
+        return redirect()
+            ->route('admin.users.index')
+            ->with('success', 'Pengguna "'.$user->name.'" ditambahkan.');
     }
 
-    public function update(Request $request, User $user): JsonResponse
+    public function update(Request $request, User $user): JsonResponse|RedirectResponse
     {
         $data = $request->validate([
             'name' => ['sometimes', 'required', 'string', 'max:100'],
@@ -57,10 +64,14 @@ class UserController extends Controller
 
         // Tidak boleh menurunkan peran diri sendiri (mengunci diri sendiri).
         if ($request->user()->id === $user->id && ($data['role'] ?? $user->role) !== User::ROLE_ADMIN) {
-            return response()->json([
-                'ok' => false,
-                'error' => 'Anda tidak bisa menurunkan peran akun sendiri.',
-            ], 422);
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'ok' => false,
+                    'error' => 'Anda tidak bisa menurunkan peran akun sendiri.',
+                ], 422);
+            }
+
+            return back()->with('error', 'Anda tidak bisa menurunkan peran akun sendiri.');
         }
 
         // Password hanya diganti bila diisi; KOSONG = biarkan semula.
@@ -73,23 +84,36 @@ class UserController extends Controller
 
         $user->fill($data)->save();
 
-        return response()->json([
-            'ok' => true,
-            'user' => $user->only(['id', 'name', 'email', 'role']),
-        ]);
-    }
-
-    public function destroy(Request $request, User $user): JsonResponse
-    {
-        if ($request->user()->id === $user->id) {
+        if ($request->expectsJson()) {
             return response()->json([
-                'ok' => false,
-                'error' => 'Anda tidak bisa menghapus akun sendiri.',
-            ], 422);
+                'ok' => true,
+                'user' => $user->only(['id', 'name', 'email', 'role']),
+            ]);
         }
 
+        return back()->with('success', 'Pengguna "'.$user->name.'" diperbarui.');
+    }
+
+    public function destroy(Request $request, User $user): JsonResponse|RedirectResponse
+    {
+        if ($request->user()->id === $user->id) {
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'ok' => false,
+                    'error' => 'Anda tidak bisa menghapus akun sendiri.',
+                ], 422);
+            }
+
+            return back()->with('error', 'Anda tidak bisa menghapus akun sendiri.');
+        }
+
+        $name = $user->name;
         $user->delete();
 
-        return response()->json(['ok' => true, 'message' => 'Pengguna dihapus.']);
+        if ($request->expectsJson()) {
+            return response()->json(['ok' => true, 'message' => 'Pengguna dihapus.']);
+        }
+
+        return back()->with('success', 'Pengguna "'.$name.'" dihapus.');
     }
 }

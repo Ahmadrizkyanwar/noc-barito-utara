@@ -8,6 +8,7 @@ use App\Models\TicketActivity;
 use App\Models\VpsRequest;
 use App\Services\Tickets\TicketService;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
@@ -115,9 +116,9 @@ class TicketController extends Controller
     }
 
     /**
-     * Ubah status (JSON untuk UI).
+     * Ubah status (JSON untuk tes/API, redirect untuk form Inertia).
      */
-    public function updateStatus(Request $request, Ticket $ticket): JsonResponse
+    public function updateStatus(Request $request, Ticket $ticket): JsonResponse|RedirectResponse
     {
         $data = $request->validate([
             'status' => ['required', Rule::in(array_keys(config('noc.ticket_statuses')))],
@@ -131,17 +132,21 @@ class TicketController extends Controller
             $data['note'] ?? null
         );
 
-        return response()->json([
-            'ok' => true,
-            'changed' => $result['changed'],
-            'ticket' => $result['ticket']->fresh('activities.user:id,name'),
-        ]);
+        if ($request->expectsJson()) {
+            return response()->json([
+                'ok' => true,
+                'changed' => $result['changed'],
+                'ticket' => $result['ticket']->fresh('activities.user:id,name'),
+            ]);
+        }
+
+        return back();
     }
 
     /**
      * Tambah catatan penanganan.
      */
-    public function addNote(Request $request, Ticket $ticket): JsonResponse
+    public function addNote(Request $request, Ticket $ticket): JsonResponse|RedirectResponse
     {
         $data = $request->validate([
             'note' => ['required', 'string', 'max:1000'],
@@ -149,16 +154,20 @@ class TicketController extends Controller
 
         $this->tickets->addNote($ticket, $data['note'], $request->user()->id);
 
-        return response()->json([
-            'ok' => true,
-            'ticket' => $ticket->fresh('activities.user:id,name'),
-        ]);
+        if ($request->expectsJson()) {
+            return response()->json([
+                'ok' => true,
+                'ticket' => $ticket->fresh('activities.user:id,name'),
+            ]);
+        }
+
+        return back();
     }
 
     /**
      * Tugaskan ke admin.
      */
-    public function assign(Request $request, Ticket $ticket): JsonResponse
+    public function assign(Request $request, Ticket $ticket): JsonResponse|RedirectResponse
     {
         $data = $request->validate([
             'assignee_id' => ['nullable', 'integer', 'exists:users,id'],
@@ -176,9 +185,13 @@ class TicketController extends Controller
             'note' => isset($data['assignee_id']) ? 'Ditugaskan' : 'Tugas dilepas',
         ]);
 
-        return response()->json([
-            'ok' => true,
-            'ticket' => $ticket->fresh('assignee:id,name'),
-        ]);
+        if ($request->expectsJson()) {
+            return response()->json([
+                'ok' => true,
+                'ticket' => $ticket->fresh('assignee:id,name'),
+            ]);
+        }
+
+        return back();
     }
 }

@@ -125,4 +125,77 @@ class WebhookSettingsTest extends TestCase
 
         $this->actingAs($user)->get('/admin/pengaturan/webhook')->assertForbidden();
     }
+
+    /**
+     * Form UI memakai Inertia (Accept html) → wajib redirect, bukan JSON
+     * (dulu memicu error "All Inertia requests must receive a valid
+     * Inertia response").
+     */
+    public function test_update_redirects_for_inertia_style_requests(): void
+    {
+        $admin = User::factory()->admin()->create();
+
+        $this->actingAs($admin)
+            ->put('/admin/pengaturan/webhook/tiket', [
+                'enabled' => true,
+                'bot_token' => '111:AAA',
+                'chat_id' => '-100222',
+            ])
+            ->assertRedirect();
+
+        $this->assertDatabaseHas('telegram_webhooks', [
+            'id' => 'tiket', 'enabled' => 1, 'chat_id' => '-100222',
+        ]);
+    }
+
+    public function test_json_response_masks_bot_token(): void
+    {
+        $admin = User::factory()->admin()->create();
+
+        $this->actingAs($admin)
+            ->putJson('/admin/pengaturan/webhook/tiket', [
+                'enabled' => true,
+                'bot_token' => '111:AAASECRET',
+                'chat_id' => '-100333',
+            ])
+            ->assertOk()
+            ->assertJsonPath('webhook.bot_token', '••••CRET');
+
+        $this->assertStringNotContainsString(
+            'AAASECRET',
+            $this->actingAs($admin)->putJson('/admin/pengaturan/webhook/tiket', ['enabled' => true])->getContent()
+        );
+    }
+
+    /** Permintaan parsial (tanpa bot_token/chat_id) tidak boleh menghapus config. */
+    public function test_partial_update_preserves_bot_token_and_chat_id(): void
+    {
+        $admin = User::factory()->admin()->create();
+        TelegramWebhook::find('tiket')->update([
+            'bot_token' => '123456:ABCDEF',
+            'chat_id' => '-100555',
+        ]);
+
+        $this->actingAs($admin)
+            ->putJson('/admin/pengaturan/webhook/tiket', ['enabled' => false])
+            ->assertOk();
+
+        $wh = TelegramWebhook::find('tiket');
+        $this->assertFalse($wh->enabled);
+        $this->assertSame('123456:ABCDEF', $wh->bot_token); // tidak terhapus
+        $this->assertSame('-100555', $wh->chat_id);          // tidak terhapus
+
+        // Field terkirim kosong = pengosongan yang disengaja (dilakukan form UI)
+        $this->actingAs($admin)
+            ->putJson('/admin/pengaturan/webhook/tiket', [
+                'enabled' => true,
+                'bot_token' => '',
+                'chat_id' => '',
+            ])
+            ->assertOk();
+
+        $wh = TelegramWebhook::find('tiket');
+        $this->assertSame('', $wh->bot_token);
+        $this->assertSame('', $wh->chat_id);
+    }
 }

@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Device;
 use App\Services\Network\MonitorPoller;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
@@ -69,26 +70,34 @@ class DeviceController extends Controller
         return back()->with('success', 'Perangkat "'.$device->name.'" diperbarui.');
     }
 
-    public function destroy(Device $device): JsonResponse
+    public function destroy(Request $request, Device $device): JsonResponse|RedirectResponse
     {
         $name = $device->name;
         $device->delete();
 
-        return response()->json(['ok' => true, 'message' => 'Perangkat "'.$name.'" dihapus.']);
+        if ($request->expectsJson()) {
+            return response()->json(['ok' => true, 'message' => 'Perangkat "'.$name.'" dihapus.']);
+        }
+
+        return back()->with('success', 'Perangkat "'.$name.'" dihapus.');
     }
 
     /**
      * Cek manual SATU perangkat (tanpa menunggu jadwal).
      */
-    public function check(Device $device, MonitorPoller $poller): JsonResponse
+    public function check(Request $request, Device $device, MonitorPoller $poller): JsonResponse|RedirectResponse
     {
         $status = $poller->pollDevice($device->fresh());
 
-        return response()->json([
-            'ok' => true,
-            'status' => $status,
-            'device' => $device->fresh(),
-        ]);
+        if ($request->expectsJson()) {
+            return response()->json([
+                'ok' => true,
+                'status' => $status,
+                'device' => $device->fresh(),
+            ]);
+        }
+
+        return back();
     }
 
     /**
