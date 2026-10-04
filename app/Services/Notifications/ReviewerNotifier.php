@@ -41,7 +41,7 @@ class ReviewerNotifier
             'vps_request',
             'Request VPS baru',
             $request->code.' — '.$request->instansi.' ('.$request->name.') menunggu review.',
-            route('admin.vps.index', [], false),
+            route('admin.services.index', [], false),
         ));
     }
 
@@ -102,7 +102,7 @@ class ReviewerNotifier
                 'vps_credentials',
                 'Kredensial VPS diunggah',
                 $request->code.' — dokumen kredensial diunggah oleh '.$by->name.'.',
-                route('admin.vps.index', [], false),
+                route('admin.services.index', [], false),
             ),
             except: $by,
         );

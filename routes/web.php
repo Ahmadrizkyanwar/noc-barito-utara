@@ -106,23 +106,28 @@ Route::middleware('auth')->group(function () {
 
 /*
 |--------------------------------------------------------------------------
-| Admin + Operator — validasi registrasi & review request VPS
+| Admin + Operator — validasi registrasi & review pendaftaran
+| (VPS + Domain + Hosting dalam SATU halaman /admin/pendaftaran)
 |--------------------------------------------------------------------------
-| Operator HANYA mendapat akses ke dua halaman ini (halaman admin lain
+| Operator HANYA mendapat akses ke halaman ini (halaman admin lain
 | tetap dijaga `role:admin`).
 */
 Route::middleware(['auth', 'role:admin,operator'])->prefix('admin')->name('admin.')->group(function () {
     Route::get('/registrasi', [RegistrationController::class, 'index'])->name('registrations.index');
     Route::patch('/registrasi/{user}/status', [RegistrationController::class, 'updateStatus'])->name('registrations.status');
 
-    Route::get('/vps', [VpsReviewController::class, 'index'])->name('vps.index');
+    // Review Pendaftaran — SATU halaman untuk VPS + Domain + Hosting
+    // (?type=vps|domain|hosting & ?status=). URL lama /admin/vps tetap ada
+    // dengan default type=vps agar tautan lama & notifikasi tidak putus.
+    Route::get('/vps', [ServiceReviewController::class, 'index'])
+        ->defaults('type', 'vps')
+        ->name('vps.index');
+    Route::get('/pendaftaran', [ServiceReviewController::class, 'index'])->name('services.index');
+
     Route::patch('/vps/{vpsRequest}/status', [VpsReviewController::class, 'updateStatus'])->name('vps.status');
     // Upload dokumen kredensial SETELAH disetujui
     Route::post('/vps/{vpsRequest}/credentials', [VpsReviewController::class, 'uploadCredentials'])
         ->name('vps.credentials.upload');
-
-    // Review pendaftaran Domain & Hosting (?type=domain|hosting & ?status=)
-    Route::get('/pendaftaran', [ServiceReviewController::class, 'index'])->name('services.index');
     Route::patch('/pendaftaran/{serviceRegistration}/status', [ServiceReviewController::class, 'updateStatus'])
         ->name('services.status');
 });

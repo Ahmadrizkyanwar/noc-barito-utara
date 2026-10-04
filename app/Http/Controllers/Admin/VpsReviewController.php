@@ -9,50 +9,14 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
-use Inertia\Inertia;
-use Inertia\Response;
 
 /**
- * Review request VPS — halaman admin/operator.
- * Termasuk upload dokumen kredensial setelah disetujui (+ notifikasi).
+ * Review request VPS — hanya aksi (status + upload kredensial).
+ * Daftar/baris digabung dengan Domain & Hosting di Admin/ServiceReviewController.
  */
 class VpsReviewController extends Controller
 {
     public function __construct(protected ReviewerNotifier $notifier) {}
-
-    public function index(Request $request): Response
-    {
-        $statuses = array_keys(config('noc.vps_statuses'));
-        $filter = (string) $request->query('status', '');
-
-        $requests = VpsRequest::query()
-            ->with(['user:id,name,email', 'reviewer:id,name'])
-            ->when(in_array($filter, $statuses, true), fn ($q) => $q->where('status', $filter))
-            ->orderByDesc('created_at')
-            ->paginate(20)
-            ->withQueryString();
-
-        // File hilang → sembunyikan baris "dokumen terunggah" agar tidak menipu.
-        $requests->through(function (VpsRequest $r) {
-            if ($r->credential_file !== null && ! Storage::disk('public')->exists($r->credential_file)) {
-                $r->credential_file = null;
-            }
-
-            if ($r->supporting_document !== null && ! Storage::disk('public')->exists($r->supporting_document)) {
-                $r->supporting_document = null;
-            }
-
-            return $r;
-        });
-
-        return Inertia::render('Admin/VpsReview', [
-            'requests' => $requests,
-            'statuses' => config('noc.vps_statuses'),
-            'ports' => config('noc.vps_ports'),
-            'operatingSystems' => config('noc.vps_operating_systems'),
-            'filters' => ['status' => in_array($filter, $statuses, true) ? $filter : ''],
-        ]);
-    }
 
     public function updateStatus(Request $request, VpsRequest $vpsRequest): RedirectResponse
     {

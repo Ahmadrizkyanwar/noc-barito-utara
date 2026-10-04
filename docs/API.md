@@ -172,10 +172,10 @@ Key: per-IP untuk route publik, per-user-id untuk route login.
 |---|---|---|---|
 | GET | `/admin/registrasi` | `admin.registrations.index` | HTML · `Admin/Registrasi` · `?status=pending\|approved\|rejected`, paginasi 20 |
 | PATCH | `/admin/registrasi/{user}/status` | `admin.registrations.status` | 302 back() + flash · body `status` (approved/rejected) |
-| GET | `/admin/vps` | `admin.vps.index` | HTML · `Admin/VpsReview` · `?status=`, paginasi 20 |
+| GET | `/admin/vps` | `admin.vps.index` | HTML · `Admin/ServiceReview` (halaman gabungan, default `?type=vps`), paginasi 20 |
 | PATCH | `/admin/vps/{id}/status` | `admin.vps.status` | 302 back() + flash · body `status`, `admin_note` |
 | POST | `/admin/vps/{id}/credentials` | `admin.vps.credentials.upload` | 302 back() + flash · multipart `credential` (harus status approved) |
-| GET | `/admin/pendaftaran` | `admin.services.index` | HTML · `Admin/ServiceReview` · `?type=domain\|hosting`, `?status=`, paginasi 20 |
+| GET | `/admin/pendaftaran` | `admin.services.index` | HTML · `Admin/ServiceReview` — **daftar gabungan VPS + Domain + Hosting**, `?type=vps\|domain\|hosting`, `?status=`, paginasi 20 |
 | PATCH | `/admin/pendaftaran/{id}/status` | `admin.services.status` | 302 back() + flash · body `status` (approved/rejected), `admin_note` |
 
 ### 5.5 Admin saja (`role:admin`, prefix `/admin`)

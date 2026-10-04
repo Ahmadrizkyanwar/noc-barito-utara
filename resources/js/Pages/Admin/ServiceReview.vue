@@ -7,6 +7,8 @@ const props = defineProps({
     registrations: { type: Object, required: true },
     statuses: { type: Object, required: true },
     types: { type: Object, required: true },
+    ports: { type: Object, required: true },
+    operatingSystems: { type: Object, required: true },
     packages: { type: Object, required: true },
     durations: { type: Object, required: true },
     filters: { type: Object, required: true },
@@ -26,7 +28,10 @@ const statusTabs = [
 
 const busy = ref(null);
 const expanded = ref(null);
-const notes = reactive({}); // admin_note per id
+const notes = reactive({}); // admin_note per "kind-id"
+const credFiles = reactive({}); // file kredensial terpilih (khusus VPS)
+
+const rowKey = (r) => `${r.kind}-${r.id}`;
 
 function filter(patch) {
     router.get(
@@ -36,11 +41,34 @@ function filter(patch) {
     );
 }
 
+function onCredChange(r, e) {
+    credFiles[rowKey(r)] = e.target.files?.[0] ?? null;
+}
+
+function uploadCred(r) {
+    const file = credFiles[rowKey(r)];
+    if (!file) return;
+
+    busy.value = rowKey(r);
+    router.post(
+        route('admin.vps.credentials.upload', r.id),
+        { credential: file },
+        {
+            forceFormData: true,
+            preserveScroll: true,
+            onSuccess: () => delete credFiles[rowKey(r)],
+            onFinish: () => (busy.value = null),
+        }
+    );
+}
+
 function decide(r, status) {
-    busy.value = r.id;
+    busy.value = rowKey(r);
     router.patch(
-        route('admin.services.status', r.id),
-        { status, admin_note: notes[r.id] ?? r.admin_note ?? '' },
+        r.kind === 'vps'
+            ? route('admin.vps.status', r.id)
+            : route('admin.services.status', r.id),
+        { status, admin_note: notes[rowKey(r)] ?? r.admin_note ?? '' },
         { preserveScroll: true, onFinish: () => (busy.value = null) }
     );
 }
@@ -56,8 +84,25 @@ function statusClass(s) {
 }
 
 const fmtDate = (d) => new Date(d).toLocaleString('id-ID');
+const portLabel = (key) => (props.ports[key] ? `${key} · ${props.ports[key]}` : key);
 
+function osLabel(r) {
+    if (!r.os) return '';
+    if (r.os === 'lainnya') return r.os_other || 'Lainnya';
+    return props.operatingSystems[r.os] ?? r.os;
+}
+
+// Ringkasan spesifikasi per jenis baris
 function specOf(r) {
+    if (r.kind === 'vps') {
+        const parts = [`${r.cores} core / ${r.ram_gb} GB / ${r.public_ips} IP publik`];
+        const os = osLabel(r);
+        if (os) parts.push('OS: ' + os);
+        if (r.ports?.length) parts.push(r.ports.map(portLabel).join(', '));
+        if (r.custom_ports) parts.push('tambahan: ' + r.custom_ports);
+        return parts.join(' · ');
+    }
+
     const parts = [];
     if (r.domain_name) parts.push(r.domain_name);
     if (r.hosting_package) parts.push(props.packages[r.hosting_package] ?? r.hosting_package);
@@ -72,9 +117,10 @@ function specOf(r) {
 <template>
     <AdminLayout>
         <div>
-            <h1 class="text-xl font-bold">Review Pendaftaran Domain &amp; Hosting</h1>
+            <h1 class="text-xl font-bold">Review Pendaftaran</h1>
             <p class="mt-1 text-sm text-slate-500">
-                Pendaftaran dari user terdaftar — disetujui/ditolak beserta catatan.
+                Request VPS, pendaftaran Domain &amp; Hosting dalam satu daftar —
+                disetujui/ditolak beserta catatan.
             </p>
         </div>
 
@@ -82,7 +128,7 @@ function specOf(r) {
         <div class="mt-5 flex flex-wrap gap-2">
             <button
                 v-for="tab in typeTabs"
-                :key="tab.key || 'all'"
+                :key="tab.key || 'all-type'"
                 class="rounded-lg px-3 py-1.5 text-sm font-semibold transition"
                 :class="filters.type === tab.key ? 'bg-brand-700 text-white' : 'bg-white text-slate-600 hover:bg-slate-100'"
                 @click="filter({ type: tab.key })"
@@ -111,13 +157,13 @@ function specOf(r) {
         <div class="mt-4 space-y-3">
             <div
                 v-for="r in registrations.data"
-                :key="r.id"
+                :key="rowKey(r)"
                 class="rounded-xl border border-slate-200 bg-white p-4"
             >
                 <!-- Ringkasan -->
                 <div
                     class="flex cursor-pointer flex-wrap items-start justify-between gap-3"
-                    @click="expanded = expanded === r.id ? null : r.id"
+                    @click="expanded = expanded === rowKey(r) ? null : rowKey(r)"
                 >
                     <div>
                         <p class="text-sm font-bold">
@@ -137,16 +183,34 @@ function specOf(r) {
                         <span class="rounded-full px-2.5 py-1 text-xs font-bold" :class="statusClass(r.status)">
                             {{ statuses[r.status] ?? r.status }}
                         </span>
-                        <span class="text-xs text-slate-400">{{ expanded === r.id ? '▲' : '▼' }}</span>
+                        <span class="text-xs text-slate-400">{{ expanded === rowKey(r) ? '▲' : '▼' }}</span>
                     </div>
                 </div>
 
                 <!-- Detail -->
-                <div v-if="expanded === r.id" class="mt-3 border-t border-slate-100 pt-3">
+                <div v-if="expanded === rowKey(r)" class="mt-3 border-t border-slate-100 pt-3">
                     <div class="grid gap-4 sm:grid-cols-2">
                         <div>
-                            <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Spesifikasi</p>
+                            <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                                {{ r.kind === 'vps' ? 'Spesifikasi & Service PORT' : 'Spesifikasi' }}
+                            </p>
                             <p class="mt-1 text-sm text-slate-700">{{ specOf(r) }}</p>
+
+                            <template v-if="r.kind === 'vps' && r.ports?.length">
+                                <p class="mt-1.5">
+                                    <span
+                                        v-for="p in r.ports"
+                                        :key="p"
+                                        class="mr-1 mb-1 inline-block rounded bg-slate-100 px-2 py-0.5 font-mono text-xs"
+                                    >{{ portLabel(p) }}</span>
+                                    <span
+                                        v-if="r.custom_ports"
+                                        class="mr-1 mb-1 inline-block rounded bg-indigo-50 px-2 py-0.5 font-mono text-xs text-indigo-700"
+                                    >
+                                        tambahan: {{ r.custom_ports }}
+                                    </span>
+                                </p>
+                            </template>
                         </div>
                         <div>
                             <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Reviewer</p>
@@ -175,7 +239,7 @@ function specOf(r) {
                                 </span>
                             </span>
                             <a
-                                :href="route('service.document', r.id)"
+                                :href="route(r.kind === 'vps' ? 'vps.document' : 'service.document', r.id)"
                                 class="text-sm font-semibold text-brand-700 hover:underline"
                             >
                                 Unduh ↓
@@ -187,7 +251,7 @@ function specOf(r) {
                     <div v-if="r.status === 'pending'" class="mt-4 border-t border-slate-100 pt-3">
                         <label class="block text-xs font-semibold text-slate-600">Catatan admin (opsional)</label>
                         <textarea
-                            v-model="notes[r.id]"
+                            v-model="notes[rowKey(r)]"
                             rows="2"
                             maxlength="1000"
                             placeholder="Mis. disetujui, hubungi NOC untuk kelanjutan…"
@@ -196,14 +260,14 @@ function specOf(r) {
                         <div class="mt-3 flex gap-2">
                             <button
                                 class="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-bold text-white hover:bg-emerald-700 disabled:opacity-60"
-                                :disabled="busy === r.id"
+                                :disabled="busy === rowKey(r)"
                                 @click="decide(r, 'approved')"
                             >
                                 Setujui
                             </button>
                             <button
                                 class="rounded-lg bg-red-600 px-4 py-2 text-sm font-bold text-white hover:bg-red-700 disabled:opacity-60"
-                                :disabled="busy === r.id"
+                                :disabled="busy === rowKey(r)"
                                 @click="decide(r, 'rejected')"
                             >
                                 Tolak
@@ -214,6 +278,51 @@ function specOf(r) {
                     <p v-else-if="r.admin_note" class="mt-3 rounded-lg bg-slate-50 px-3 py-2 text-sm text-slate-600">
                         Catatan: {{ r.admin_note }}
                     </p>
+
+                    <!-- Kredensial VPS (khusus baris VPS, setelah disetujui) -->
+                    <div
+                        v-if="r.kind === 'vps' && r.status === 'approved'"
+                        class="mt-4 border-t border-slate-100 pt-3"
+                    >
+                        <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Kredensial VPS</p>
+
+                        <div
+                            v-if="r.credential_file"
+                            class="mt-2 flex flex-wrap items-center gap-3 rounded-lg bg-emerald-50 px-3 py-2"
+                        >
+                            <span class="text-sm text-emerald-800">
+                                📄 Dokumen terunggah
+                                <span v-if="r.credential_uploaded_at" class="text-emerald-600">
+                                    · {{ fmtDate(r.credential_uploaded_at) }}
+                                </span>
+                            </span>
+                            <a
+                                :href="route('vps.credentials', r.id)"
+                                class="text-sm font-semibold text-emerald-700 hover:underline"
+                            >
+                                Unduh ↓
+                            </a>
+                        </div>
+
+                        <div class="mt-2 flex flex-wrap items-center gap-2">
+                            <input
+                                type="file"
+                                accept=".pdf,.jpg,.jpeg,.png,.txt"
+                                class="text-sm"
+                                @change="onCredChange(r, $event)"
+                            >
+                            <button
+                                class="rounded-lg bg-brand-700 px-3 py-1.5 text-xs font-bold text-white hover:bg-brand-800 disabled:opacity-60"
+                                :disabled="!credFiles[rowKey(r)] || busy === rowKey(r)"
+                                @click="uploadCred(r)"
+                            >
+                                {{ busy === rowKey(r) && credFiles[rowKey(r)] ? 'Mengunggah…' : 'Upload kredensial' }}
+                            </button>
+                        </div>
+                        <p class="mt-1 text-[11px] text-slate-400">
+                            PDF/JPG/PNG/TXT maks 5 MB — pemilik request otomatis menerima notifikasi.
+                        </p>
+                    </div>
                 </div>
             </div>
         </div>

@@ -335,6 +335,97 @@ class ServiceRegistrationTest extends TestCase
             ->assertInertia(fn ($page) => $page->has('tickets.data', 2));
     }
 
+    // ── Review gabungan (VPS + Domain + Hosting) ────────────────────────────
+
+    public function test_merged_review_page_lists_vps_and_registrations_together(): void
+    {
+        $user = $this->approvedUser();
+
+        $this->actingAs($user)->post('/vps', [
+            'name' => 'Budi Santoso',
+            'nip' => '198701012010011001',
+            'jabatan' => 'Analis Kebijakan',
+            'instansi' => 'Dinas Pendidikan',
+            'cores' => 4,
+            'ram_gb' => 8,
+            'public_ips' => 2,
+            'os' => 'debian-12',
+            'ports' => ['22', '443'],
+            'custom_ports' => '8443',
+            'purpose' => 'Portal e-learning.',
+        ])->assertSessionHas('success');
+
+        $this->actingAs($user)->post('/domain', $this->domainPayload())->assertSessionHas('success');
+
+        $admin = User::factory()->admin()->create();
+
+        $this->actingAs($admin)
+            ->get('/admin/pendaftaran')
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->component('Admin/ServiceReview')
+                ->has('registrations.data', 2)
+                ->where('types.vps', 'Request VPS')
+                ->where('filters.type', '')
+                ->where('filters.status', ''));
+
+        // Filter tipe VPS — ports harus sudah di-decode jadi array
+        $this->actingAs($admin)
+            ->get('/admin/pendaftaran?type=vps')
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->has('registrations.data', 1)
+                ->where('registrations.data.0.kind', 'vps')
+                ->where('registrations.data.0.ports', ['22', '443'])
+                ->where('registrations.data.0.custom_ports', '8443')
+                ->where('filters.type', 'vps'));
+
+        // Filter tipe domain
+        $this->actingAs($admin)
+            ->get('/admin/pendaftaran?type=domain')
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->has('registrations.data', 1)
+                ->where('registrations.data.0.kind', 'service')
+                ->where('registrations.data.0.type', 'domain'));
+    }
+
+    public function test_legacy_vps_url_shows_merged_page_filtered_to_vps(): void
+    {
+        $this->actingAs($this->approvedUser())
+            ->post('/hosting', $this->hostingPayload())
+            ->assertSessionHas('success');
+
+        $admin = User::factory()->admin()->create();
+
+        $this->actingAs($admin)
+            ->get('/admin/vps')
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->component('Admin/ServiceReview')
+                ->where('filters.type', 'vps')
+                ->has('registrations.data', 0)); // hosting tidak ikut saat type=vps
+    }
+
+    public function test_status_filter_applies_to_both_branches(): void
+    {
+        $user = $this->approvedUser();
+        $this->actingAs($user)->post('/domain', $this->domainPayload())->assertSessionHas('success');
+        $this->actingAs($user)->post('/hosting', $this->hostingPayload())->assertSessionHas('success');
+
+        $admin = User::factory()->admin()->create();
+
+        $this->actingAs($admin)
+            ->get('/admin/pendaftaran?status=pending')
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page->has('registrations.data', 2));
+
+        $this->actingAs($admin)
+            ->get('/admin/pendaftaran?status=approved')
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page->has('registrations.data', 0));
+    }
+
     // ── Dashboard ───────────────────────────────────────────────────────────
 
     public function test_dashboard_shows_registration_summary_and_history(): void

@@ -23,9 +23,10 @@ Kabupaten Barito Utara. Dibangun dengan **Laravel 12 + Inertia + Vue 3 + Tailwin
   cek manual, detail + grafik (CPU, RTT, RX/TX) per rentang.
 - **Layanan** `/admin/layanan` — ticketing laporan gangguan **+** pendaftaran
   VPS/domain/hosting (filter, detail, ubah status, catatan, foto).
-- **Review VPS** `/admin/vps` — approve/tolak request VPS + upload kredensial.
-- **Review Pendaftaran** `/admin/pendaftaran` — approve/tolak pendaftaran
-  Domain & Hosting (filter tipe/status, dokumen pendukung).
+- **Review Pendaftaran** `/admin/pendaftaran` — SATU halaman untuk review
+  Request VPS, Domain & Hosting (filter tipe/status, approve/tolak + catatan,
+  dokumen pendukung, upload kredensial VPS). URL lama `/admin/vps` tetap ada
+  (terfilter ke VPS).
 - **Pengaturan → Pengguna** `/admin/pengaturan/user` — CRUD user (admin/user).
 - **Pengaturan → Webhook Telegram** `/admin/pengaturan/webhook` — 2 entri tetap
   (Tiket & Jaringan): toggle, bot token, chat id, uji kirim.

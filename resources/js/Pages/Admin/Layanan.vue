@@ -38,7 +38,7 @@ const titleOf = (t) => {
 };
 
 const detailHref = (t) => {
-    if (isVps(t)) return route('admin.vps.index');
+    if (isVps(t)) return route('admin.services.index', { type: 'vps' });
     if (isService(t)) return route('admin.services.index', t.category === 'Domain' ? { type: 'domain' } : { type: 'hosting' });
     return route('admin.tickets.show', t.id);
 };
