@@ -113,6 +113,49 @@ class VpsRequestTest extends TestCase
         $this->assertDatabaseCount('vps_requests', 0);
     }
 
+    public function test_store_requires_os_other_when_os_is_lainnya(): void
+    {
+        $payload = $this->validPayload();
+        $payload['os'] = 'lainnya';
+
+        $this->actingAs($this->approvedUser())
+            ->from('/vps')
+            ->post('/vps', $payload)
+            ->assertSessionHasErrors('os_other');
+
+        $this->assertDatabaseCount('vps_requests', 0);
+    }
+
+    public function test_store_keeps_typed_os_when_os_is_lainnya(): void
+    {
+        $user = $this->approvedUser();
+        $payload = $this->validPayload();
+        $payload['os'] = 'lainnya';
+        $payload['os_other'] = 'Proxmox VE 8';
+
+        $this->actingAs($user)
+            ->post('/vps', $payload)
+            ->assertRedirect(route('vps.index'))
+            ->assertSessionHas('success');
+
+        $row = VpsRequest::first();
+        $this->assertSame('lainnya', $row->os);
+        $this->assertSame('Proxmox VE 8', $row->os_other);
+    }
+
+    public function test_store_clears_os_other_when_os_is_not_lainnya(): void
+    {
+        $user = $this->approvedUser();
+        $payload = $this->validPayload();
+        $payload['os_other'] = 'Harus Dibuang';
+
+        $this->actingAs($user)
+            ->post('/vps', $payload)
+            ->assertSessionHas('success');
+
+        $this->assertNull(VpsRequest::first()->os_other);
+    }
+
     public function test_store_accepts_custom_service_ports(): void
     {
         $user = $this->approvedUser();

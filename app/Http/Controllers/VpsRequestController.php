@@ -48,6 +48,7 @@ class VpsRequestController extends Controller
             'ram_gb' => ['required', 'integer', 'between:1,1024'],
             'public_ips' => ['required', 'integer', 'between:1,16'],
             'os' => ['required', 'string', Rule::in(array_keys(config('noc.vps_operating_systems')))],
+            'os_other' => ['required_if:os,lainnya', 'nullable', 'string', 'max:100'],
             'ports' => ['required_without:custom_ports', 'array'],
             'ports.*' => ['string', Rule::in(array_keys(config('noc.vps_ports')))],
             'custom_ports' => ['nullable', 'string', 'max:255', 'regex:/^$|^\d{1,5}(\s*-\s*\d{1,5})?(\s*,\s*\d{1,5}(\s*-\s*\d{1,5})?)*$/'],
@@ -55,12 +56,16 @@ class VpsRequestController extends Controller
             'supporting_document' => ['nullable', 'file', 'mimes:pdf,doc,docx,jpg,jpeg,png', 'max:5120'],
         ], [
             'os.in' => 'Sistem operasi tidak dikenal.',
+            'os_other.required_if' => 'Isi nama sistem operasi yang Anda maksud pada pilihan "Lainnya".',
             'custom_ports.regex' => 'Format service port tambahan tidak valid — gunakan angka/rentang dipisah koma, contoh: 8443, 9090, 3000-3100.',
             'supporting_document.mimes' => 'Dokumen pendukung harus berformat PDF, DOC, DOCX, JPG, atau PNG.',
         ]);
 
         // Minimal satu service port: pilihan di daftar ATAU isian bebas.
         $data['ports'] = $data['ports'] ?? [];
+
+        // Isian bebas OS hanya relevan bila memilih "Lainnya".
+        $data['os_other'] = $data['os'] === 'lainnya' ? trim((string) $data['os_other']) : null;
 
         if ($request->hasFile('supporting_document')) {
             $data['supporting_document'] = $request->file('supporting_document')

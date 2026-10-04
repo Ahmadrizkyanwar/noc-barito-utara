@@ -289,7 +289,7 @@ class DashboardController extends Controller
                 ->latest()
                 ->take(5)
                 ->get([
-                    'id', 'code', 'name', 'instansi', 'cores', 'ram_gb', 'public_ips', 'os',
+                    'id', 'code', 'name', 'instansi', 'cores', 'ram_gb', 'public_ips', 'os', 'os_other',
                     'purpose', 'status', 'admin_note', 'credential_file', 'created_at',
                 ])
                 ->map(function (VpsRequest $r) {

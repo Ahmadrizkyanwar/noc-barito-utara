@@ -1,7 +1,7 @@
 <script setup>
 import UserLayout from '@/Layouts/UserLayout.vue';
 import { Link, useForm, usePage } from '@inertiajs/vue3';
-import { computed, ref } from 'vue';
+import { computed, ref, watch } from 'vue';
 
 const props = defineProps({
     canRequest: { type: Boolean, required: true },
@@ -21,6 +21,7 @@ const form = useForm({
     ram_gb: 4,
     public_ips: 1,
     os: '',
+    os_other: '',
     ports: ['22', '443'],
     custom_ports: '',
     purpose: '',
@@ -29,17 +30,40 @@ const form = useForm({
 
 const docInput = ref(null);
 const docName = ref('');
+const docSize = ref(0);
+const dragging = ref(false);
 
-function onDocChange(e) {
-    const file = e.target.files?.[0] ?? null;
+// OS "Lainnya" → tampilkan isian bebas; pilihan lain → kosongkan.
+watch(
+    () => form.os,
+    (v) => {
+        if (v !== 'lainnya') form.os_other = '';
+    }
+);
+
+function setDoc(file) {
     form.supporting_document = file;
     docName.value = file ? file.name : '';
+    docSize.value = file ? file.size : 0;
+}
+
+function onDocChange(e) {
+    setDoc(e.target.files?.[0] ?? null);
+}
+
+function onDocDrop(e) {
+    dragging.value = false;
+    setDoc(e.dataTransfer?.files?.[0] ?? null);
 }
 
 function clearDoc() {
-    form.supporting_document = null;
-    docName.value = '';
+    setDoc(null);
     if (docInput.value) docInput.value.value = '';
+}
+
+function fmtSize(bytes) {
+    if (bytes >= 1024 * 1024) return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+    return Math.max(1, Math.round(bytes / 1024)) + ' KB';
 }
 
 const accountLabel = computed(
@@ -61,7 +85,7 @@ function submit() {
     form.post(route('vps.store'), {
         preserveScroll: true,
         onSuccess: () => {
-            form.reset('nip', 'jabatan', 'instansi', 'purpose', 'custom_ports');
+            form.reset('nip', 'jabatan', 'instansi', 'purpose', 'custom_ports', 'os_other');
             clearDoc();
         },
     });
@@ -241,6 +265,21 @@ function statusClass(s) {
                         </option>
                     </select>
                     <p v-if="form.errors.os" class="mt-1 text-xs text-red-600">{{ form.errors.os }}</p>
+
+                    <div v-if="form.os === 'lainnya'" class="mt-3">
+                        <label for="vps-os-other" class="block text-sm font-semibold">Nama Sistem Operasi Lainnya *</label>
+                        <input
+                            id="vps-os-other"
+                            v-model.trim="form.os_other"
+                            type="text"
+                            required
+                            maxlength="100"
+                            placeholder="Contoh: Proxmox VE 8, FreeBSD 14, AlmaLinux 10"
+                            class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-brand-600 focus:outline-none"
+                            :class="{ 'border-red-400': form.errors.os_other }"
+                        >
+                        <p v-if="form.errors.os_other" class="mt-1 text-xs text-red-600">{{ form.errors.os_other }}</p>
+                    </div>
                 </div>
             </div>
 
@@ -305,29 +344,67 @@ function statusClass(s) {
 
             <!-- Dokumen pendukung -->
             <div class="mt-4">
-                <label for="vps-doc" class="block text-sm font-semibold">Dokumen Pendukung (opsional)</label>
+                <span class="block text-sm font-semibold">Dokumen Pendukung (opsional)</span>
                 <p class="mt-0.5 text-xs text-slate-500">
                     Surat permohonan / pendukung lain — PDF, DOC, DOCX, JPG, atau PNG, maks 5 MB.
                 </p>
-                <div class="mt-1 flex flex-wrap items-center gap-2">
-                    <input
-                        id="vps-doc"
-                        ref="docInput"
-                        type="file"
-                        accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
-                        class="text-sm"
-                        @change="onDocChange"
-                    >
-                    <button
-                        v-if="docName"
-                        type="button"
-                        class="rounded-lg border border-slate-300 px-2 py-1 text-xs font-semibold text-slate-500 hover:bg-slate-50"
-                        @click="clearDoc"
-                    >
-                        Hapus ✕
-                    </button>
+
+                <!-- Sudah memilih file -->
+                <div
+                    v-if="docName"
+                    class="mt-2 flex flex-wrap items-center gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3"
+                >
+                    <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-white text-xl shadow-sm">📄</span>
+                    <div class="min-w-0 flex-1">
+                        <p class="truncate text-sm font-semibold text-emerald-800">{{ docName }}</p>
+                        <p class="text-xs text-emerald-600">{{ fmtSize(docSize) }} · siap dikirim</p>
+                    </div>
+                    <div class="flex gap-2">
+                        <button
+                            type="button"
+                            class="rounded-lg border border-emerald-300 bg-white px-3 py-1.5 text-xs font-bold text-emerald-700 hover:bg-emerald-100"
+                            @click="docInput?.click()"
+                        >
+                            Ganti
+                        </button>
+                        <button
+                            type="button"
+                            class="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-bold text-slate-500 hover:bg-slate-50"
+                            @click="clearDoc"
+                        >
+                            Hapus
+                        </button>
+                    </div>
                 </div>
-                <p v-if="docName" class="mt-1 text-xs text-slate-600">📎 {{ docName }}</p>
+
+                <!-- Dropzone -->
+                <label
+                    v-else
+                    for="vps-doc"
+                    class="mt-2 flex cursor-pointer flex-col items-center justify-center gap-1 rounded-xl border-2 border-dashed px-4 py-7 text-center transition"
+                    :class="dragging
+                        ? 'border-brand-500 bg-brand-50'
+                        : 'border-slate-300 bg-slate-50 hover:border-brand-400 hover:bg-brand-50/50'"
+                    @dragover.prevent="dragging = true"
+                    @dragleave.prevent="dragging = false"
+                    @drop.prevent="onDocDrop"
+                >
+                    <span class="text-3xl">📎</span>
+                    <span class="text-sm font-semibold text-brand-700">Klik untuk memilih file</span>
+                    <span class="text-xs text-slate-500">atau seret &amp; letakkan file di sini</span>
+                    <span class="mt-1 rounded-full bg-white px-3 py-1 text-[11px] font-semibold text-slate-500 shadow-sm">
+                        PDF · DOC · DOCX · JPG · PNG — maks 5 MB
+                    </span>
+                </label>
+
+                <input
+                    id="vps-doc"
+                    ref="docInput"
+                    type="file"
+                    accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                    class="sr-only"
+                    @change="onDocChange"
+                >
                 <p v-if="form.errors.supporting_document" class="mt-1 text-xs text-red-600">
                     {{ form.errors.supporting_document }}
                 </p>

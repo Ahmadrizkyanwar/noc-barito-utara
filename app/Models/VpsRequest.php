@@ -28,6 +28,7 @@ class VpsRequest extends Model
         'ram_gb',
         'public_ips',
         'os',
+        'os_other',
         'ports',
         'custom_ports',
         'purpose',

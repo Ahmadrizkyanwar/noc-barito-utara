@@ -75,7 +75,11 @@ function statusClass(s) {
 
 const fmtDate = (d) => new Date(d).toLocaleString('id-ID');
 const portLabel = (key) => (props.ports[key] ? `${key} · ${props.ports[key]}` : key);
-const osLabel = (key) => props.operatingSystems[key] ?? key ?? '—';
+const osLabel = (r) => {
+    if (!r.os) return '—';
+    if (r.os === 'lainnya') return r.os_other || 'Lainnya';
+    return props.operatingSystems[r.os] ?? r.os;
+};
 </script>
 
 <template>
@@ -124,7 +128,7 @@ const osLabel = (key) => props.operatingSystems[key] ?? key ?? '—';
                         <p class="mt-0.5 text-xs text-slate-500">
                             NIP {{ r.nip }} · {{ r.jabatan }} ·
                             {{ r.cores }} core / {{ r.ram_gb }} GB / {{ r.public_ips }} IP publik
-                            <span v-if="r.os"> · {{ osLabel(r.os) }}</span>
+                            <span v-if="r.os"> · {{ osLabel(r) }}</span>
                             · {{ fmtDate(r.created_at) }}
                         </p>
                     </div>
@@ -158,7 +162,7 @@ const osLabel = (key) => props.operatingSystems[key] ?? key ?? '—';
                         </div>
                         <div>
                             <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Sistem Operasi</p>
-                            <p class="mt-1 text-sm text-slate-700">{{ osLabel(r.os) }}</p>
+                            <p class="mt-1 text-sm text-slate-700">{{ osLabel(r) }}</p>
                         </div>
                         <div>
                             <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Reviewer</p>

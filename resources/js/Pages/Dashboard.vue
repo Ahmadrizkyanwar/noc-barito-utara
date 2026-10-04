@@ -40,7 +40,11 @@ const statusClass = (s) =>
 
 // Status request VPS (label & warna berbeda dari tiket)
 const vpsStatusLabel = (s) => props.vpsStatuses[s] ?? s;
-const vpsOsLabel = (os) => (os ? (props.vpsOperatingSystems[os] ?? os) : '');
+const vpsOsLabel = (r) => {
+    if (!r.os) return '';
+    if (r.os === 'lainnya') return r.os_other || 'Lainnya';
+    return props.vpsOperatingSystems[r.os] ?? r.os;
+};
 const vpsStatusClass = (s) =>
     ({
         pending: 'bg-amber-100 text-amber-800',
@@ -780,7 +784,7 @@ watch(() => props.widgets, () => rerender(), { deep: true });
                                         </p>
                                         <p class="mt-0.5 text-xs text-slate-500">
                                             {{ r.cores }} core / {{ r.ram_gb }} GB / {{ r.public_ips }} IP
-                                            <span v-if="r.os"> · {{ vpsOsLabel(r.os) }}</span> ·
+                                            <span v-if="r.os"> · {{ vpsOsLabel(r) }}</span> ·
                                             {{ new Date(r.created_at).toLocaleDateString('id-ID') }}
                                         </p>
                                     </div>
