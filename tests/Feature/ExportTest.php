@@ -134,21 +134,30 @@ class ExportTest extends TestCase
     {
         $this->makeTicket('TKT-TEST-0201');
 
-        $this->actingAs($this->admin())
+        $response = $this->actingAs($this->admin())
             ->get('/admin/export/download?dataset=tiket&format=excel&periode=harian')
             ->assertOk()
             ->assertHeader('content-type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
             ->assertDownload();
+
+        // Berkas XLSX = arsip ZIP → diawali "PK"
+        $content = $response->streamedContent();
+        $this->assertNotSame('', $content);
+        $this->assertSame('PK', substr($content, 0, 2));
     }
 
     public function test_pdf_download_returns_pdf_file(): void
     {
         $this->makeTicket('TKT-TEST-0301');
 
-        $this->actingAs($this->operator())
+        $response = $this->actingAs($this->operator())
             ->get('/admin/export/download?dataset=tiket&format=pdf&periode=harian')
             ->assertOk()
             ->assertDownload();
+
+        $content = (string) $response->getContent();
+        $this->assertGreaterThan(1000, strlen($content));
+        $this->assertSame('%PDF', substr($content, 0, 4));
     }
 
     // ── Validasi ────────────────────────────────────────────────────────────

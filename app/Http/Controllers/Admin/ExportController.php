@@ -116,7 +116,7 @@ class ExportController extends Controller
 
         return response()->streamDownload(function () use ($rows): void {
             $writer = new Writer();
-            $writer->openToWrite('php://output');
+            $writer->openToFile('php://output');
 
             $headerStyle = (new Style())
                 ->setBackgroundColor('#1d4ed8')
