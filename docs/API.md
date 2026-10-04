@@ -177,6 +177,9 @@ Key: per-IP untuk route publik, per-user-id untuk route login.
 | POST | `/admin/vps/{id}/credentials` | `admin.vps.credentials.upload` | 302 back() + flash · multipart `credential` (harus status approved) |
 | GET | `/admin/pendaftaran` | `admin.services.index` | HTML · `Admin/ServiceReview` — **daftar gabungan VPS + Domain + Hosting**, `?type=vps\|domain\|hosting`, `?status=`, paginasi 20 |
 | PATCH | `/admin/pendaftaran/{id}/status` | `admin.services.status` | 302 back() + flash · body `status` (approved/rejected), `admin_note` |
+| GET | `/admin/export` | `admin.exports.index` | HTML · `Admin/Export` |
+| GET | `/admin/export/preview` | `admin.exports.preview` | **JSON selalu** `{count, from, to, period_label}` · §7.8 |
+| GET | `/admin/export/download` | `admin.exports.download` | Unduh berkas PDF/XLSX (throttle 10/mnt) · §7.8 |
 
 ### 5.5 Admin saja (`role:admin`, prefix `/admin`)
 
@@ -493,6 +496,31 @@ tetap dipakai; **422** `Anda tidak bisa menurunkan peran akun sendiri.` bila sel
 
 `POST /admin/layanan/{ticket}/note` — `note` wajib, string, ≤1000.
 `POST /admin/layanan/{ticket}/assign` — `assignee_id` opsional, integer, `exists:users,id` (null = lepas).
+
+### 7.8 `GET /admin/export` — export laporan (PDF / Excel)
+
+Endpoint unduh: `GET /admin/export/download`, preview jumlah baris:
+`GET /admin/export/preview` (JSON, parameter sama). Keduanya `role:admin,operator`;
+download dibatasi **10/menit**.
+
+| Param | Aturan |
+|---|---|
+| `dataset` | wajib, `semua` \| `tiket` \| `vps` \| `domain` \| `hosting` |
+| `format` | wajib, `pdf` \| `excel` (XLSX) · pesan: `Format export tidak dikenal — pilih pdf atau excel.` |
+| `periode` | wajib, `harian` (hari ini) \| `mingguan` (7 hari terakhir) \| `custom` (rentang tanggal) |
+| `dari` | wajib bila `periode=custom`, format tanggal `YYYY-MM-DD` |
+| `sampai` | wajib bila `periode=custom`, `>= dari` |
+
+Respons download: **200** berkas
+`laporan-{dataset}-{periode}-{Ymd-His}.pdf` (A4 lanskap, dompdf) atau
+`.xlsx` (OpenSpout, header biru). Kolom: `Jenis, Kode, Nama/Pelapor,
+Instansi/Kategori, Detail, Keterangan, Status, Catatan Admin, Dibuat`.
+Gagal validasi → 302 + `$errors` (422 bila JSON).
+
+```bash
+curl -b cookies.txt -o laporan.pdf \
+  "$BASE/admin/export/download?dataset=tiket&format=pdf&periode=harian"
+```
 
 ---
 

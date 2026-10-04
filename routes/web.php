@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\DeviceController;
+use App\Http\Controllers\Admin\ExportController;
 use App\Http\Controllers\Admin\RegistrationController;
 use App\Http\Controllers\Admin\ServiceReviewController;
 use App\Http\Controllers\Admin\TicketController as AdminTicketController;
@@ -130,6 +131,13 @@ Route::middleware(['auth', 'role:admin,operator'])->prefix('admin')->name('admin
         ->name('vps.credentials.upload');
     Route::patch('/pendaftaran/{serviceRegistration}/status', [ServiceReviewController::class, 'updateStatus'])
         ->name('services.status');
+
+    // Export laporan (PDF/Excel) — tiket gangguan + pendaftaran VPS/Domain/Hosting
+    Route::get('/export', [ExportController::class, 'index'])->name('exports.index');
+    Route::get('/export/preview', [ExportController::class, 'preview'])->name('exports.preview');
+    Route::get('/export/download', [ExportController::class, 'download'])
+        ->name('exports.download')
+        ->middleware('throttle:10,1');
 });
 
 /*

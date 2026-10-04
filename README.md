@@ -27,6 +27,9 @@ Kabupaten Barito Utara. Dibangun dengan **Laravel 12 + Inertia + Vue 3 + Tailwin
   Request VPS, Domain & Hosting (filter tipe/status, approve/tolak + catatan,
   dokumen pendukung, upload kredensial VPS). URL lama `/admin/vps` tetap ada
   (terfilter ke VPS).
+- **Export Laporan** `/admin/export` — unduh tiket gangguan + pendaftaran
+  VPS/Domain/Hosting sebagai **PDF** atau **Excel**, rentang harian /
+  mingguan / pilih tanggal.
 - **Pengaturan → Pengguna** `/admin/pengaturan/user` — CRUD user (admin/user).
 - **Pengaturan → Webhook Telegram** `/admin/pengaturan/webhook` — 2 entri tetap
   (Tiket & Jaringan): toggle, bot token, chat id, uji kirim.
@@ -81,7 +84,7 @@ Login default: `admin@noc.baritoutarakab.go.id` (atau `${WEB_USERNAME}@noc.barit
 composer install && npm install && npm run build
 php artisan migrate --seed
 php artisan serve             # atau: composer run dev
-php artisan test              # 178 tests
+php artisan test              # 190 tests
 ```
 
 ## Konfigurasi Environment
@@ -137,7 +140,7 @@ Cara 1/2 sudah teruji: NPM menjawab benar dengan SNI `kuma.…` dari IP lokal.
 
 ```bash
 php artisan test
-# 178 tests, 925 assertions — auth, guard role, tiket, VPS, domain/hosting, device, webhook, telegram, probe
+# 190 tests, 1051 assertions — auth, guard role, tiket, VPS, domain/hosting, export, device, webhook, telegram, probe
 ```
 
 Probe ICMP diuji dengan stub deterministik (image test tidak punya binary
