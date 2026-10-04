@@ -63,6 +63,12 @@ class Notifier
             return false;
         }
 
+        // Jejak audit: pesan benar-benar diterima Telegram (dipakai verifikasi live).
+        Log::info('telegram terkirim', [
+            'webhook' => $webhookId,
+            'message_id' => $body['result']['message_id'] ?? null,
+        ]);
+
         return true;
     }
 
