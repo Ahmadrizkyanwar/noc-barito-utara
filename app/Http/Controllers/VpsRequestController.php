@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\VpsRequest;
 use App\Services\Notifications\ReviewerNotifier;
+use App\Services\Telegram\Notifier as TelegramNotifier;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -17,7 +18,10 @@ use Inertia\Response;
  */
 class VpsRequestController extends Controller
 {
-    public function __construct(protected ReviewerNotifier $notifier) {}
+    public function __construct(
+        protected ReviewerNotifier $notifier,
+        protected TelegramNotifier $telegram,
+    ) {}
 
     public function index(Request $request): Response
     {
@@ -79,6 +83,13 @@ class VpsRequestController extends Controller
 
         // Lonceng notifikasi untuk admin/operator.
         $this->notifier->vpsRequestReceived($vpsRequest);
+
+        // Tiket masuk (request VPS) → Telegram webhook `tiket`.
+        try {
+            $this->telegram->sendVpsRequestCreated($vpsRequest);
+        } catch (\Throwable $e) {
+            report($e);
+        }
 
         return redirect()
             ->route('vps.index')

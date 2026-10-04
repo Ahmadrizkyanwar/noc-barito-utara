@@ -2,11 +2,13 @@
 
 namespace Tests\Feature;
 
+use App\Models\TelegramWebhook;
 use App\Models\User;
 use App\Models\VpsRequest;
 use Database\Seeders\DatabaseSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
@@ -309,6 +311,52 @@ class VpsRequestTest extends TestCase
                 ->component('VpsRequest')
                 ->missing('requests')
                 ->where('canRequest', true));
+    }
+
+    // ── Telegram (webhook `tiket`) ───────────────────────────────────────────
+
+    public function test_new_vps_request_sends_telegram_notification(): void
+    {
+        Http::fake(['api.telegram.org/*' => Http::response(['ok' => true], 200)]);
+
+        $this->tiketWebhook();
+
+        $this->actingAs($this->approvedUser())
+            ->post('/vps', $this->validPayload())
+            ->assertSessionHas('success');
+
+        Http::assertSent(fn ($request) => str_contains($request->url(), 'api.telegram.org/bot123:token/sendMessage')
+            && str_contains($request['text'] ?? '', 'REQUEST VPS BARU')
+            && str_contains($request['text'] ?? '', 'Dinas Pendidikan'));
+    }
+
+    public function test_telegram_failure_does_not_break_vps_request(): void
+    {
+        Http::fake(['api.telegram.org/*' => Http::response('nope', 500)]);
+
+        $this->tiketWebhook();
+
+        $this->actingAs($this->approvedUser())
+            ->post('/vps', $this->validPayload())
+            ->assertSessionHas('success');
+
+        $this->assertDatabaseCount('vps_requests', 1);
+    }
+
+    protected function tiketWebhook(): TelegramWebhook
+    {
+        $wh = TelegramWebhook::firstOrCreate(
+            ['id' => TelegramWebhook::ID_TIKET],
+            ['label' => 'Tiket', 'enabled' => false]
+        );
+
+        $wh->update([
+            'enabled' => true,
+            'bot_token' => '123:token',
+            'chat_id' => '-1001',
+        ]);
+
+        return $wh->refresh();
     }
 
     // ── Review admin/operator ───────────────────────────────────────────────

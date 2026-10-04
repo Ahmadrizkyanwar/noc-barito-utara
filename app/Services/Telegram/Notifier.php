@@ -5,6 +5,7 @@ namespace App\Services\Telegram;
 use App\Models\Device;
 use App\Models\TelegramWebhook;
 use App\Models\Ticket;
+use App\Models\VpsRequest;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
@@ -12,7 +13,7 @@ use Illuminate\Support\Facades\Log;
  * Pengirim pesan Telegram via Bot API.
  *
  * Dua webhook TETAP per fungsi (keputusan desain):
- *   - `tiket`    → laporan gangguan baru
+ *   - `tiket`    → tiket masuk APA SAJA: laporan gangguan baru + request VPS baru
  *   - `jaringan` → transisi status perangkat
  *
  * Gagal-tertutup: timeout/HTTP error → log warning, TIDAK mengganggu siklus
@@ -117,6 +118,53 @@ class Notifier
         ];
 
         return $this->send(TelegramWebhook::ID_JARINGAN, implode("\n", $lines));
+    }
+
+    /**
+     * Notifikasi request VPS baru (webhook `tiket` — kanal tiket yang sama).
+     */
+    public function sendVpsRequestCreated(VpsRequest $vps): bool
+    {
+        $preset = (array) config('noc.vps_ports', []);
+        $ports = [];
+
+        foreach ($vps->ports ?? [] as $p) {
+            $ports[] = $p.(isset($preset[$p]) ? ' · '.$preset[$p] : '');
+        }
+
+        if ($vps->custom_ports !== null && $vps->custom_ports !== '') {
+            $ports[] = $vps->custom_ports.' · tambahan';
+        }
+
+        $os = $vps->os;
+
+        if ($os === 'lainnya') {
+            $os = $vps->os_other !== null && $vps->os_other !== '' ? $vps->os_other : 'Lainnya';
+        } else {
+            $osList = (array) config('noc.vps_operating_systems', []);
+            $os = $osList[$os] ?? $os ?? '-';
+        }
+
+        $lines = [
+            '<b>REQUEST VPS BARU</b>',
+            '',
+            'Kode: <b>'.$this->e($vps->code).'</b>',
+            'Instansi: '.$this->e($vps->instansi),
+            'Pemohon: '.$this->e($vps->name).' — '.$this->e($vps->jabatan),
+            'Spek: '.$vps->cores.' core / '.$vps->ram_gb.' GB / '.$vps->public_ips.' IP publik',
+            'OS: '.$this->e($os),
+            'Port: '.$this->e($ports !== [] ? implode(', ', $ports) : '-'),
+        ];
+
+        $purpose = trim((string) $vps->purpose);
+
+        if ($purpose !== '') {
+            $lines[] = 'Tujuan: '.$this->e(mb_substr($purpose, 0, 200));
+        }
+
+        $lines[] = 'Waktu: '.$vps->created_at->format('d M Y H:i');
+
+        return $this->send(TelegramWebhook::ID_TIKET, implode("\n", $lines));
     }
 
     /**
