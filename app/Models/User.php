@@ -80,7 +80,7 @@ class User extends Authenticatable implements MustVerifyEmailContract
         return $this->status === self::STATUS_APPROVED;
     }
 
-    /** Fitur Request VPS hanya untuk akun yang sudah disetujui. */
+    /** Pendaftaran layanan (VPS/Domain/Hosting) hanya untuk akun yang sudah disetujui. */
     public function canRequestVps(): bool
     {
         return $this->isApproved();
@@ -102,5 +102,10 @@ class User extends Authenticatable implements MustVerifyEmailContract
     public function vpsRequests(): HasMany
     {
         return $this->hasMany(VpsRequest::class);
+    }
+
+    public function serviceRegistrations(): HasMany
+    {
+        return $this->hasMany(ServiceRegistration::class);
     }
 }

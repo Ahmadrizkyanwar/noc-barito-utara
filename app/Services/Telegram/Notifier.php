@@ -3,6 +3,7 @@
 namespace App\Services\Telegram;
 
 use App\Models\Device;
+use App\Models\ServiceRegistration;
 use App\Models\TelegramWebhook;
 use App\Models\Ticket;
 use App\Models\VpsRequest;
@@ -169,6 +170,31 @@ class Notifier
         }
 
         $lines[] = 'Waktu: '.$vps->created_at->format('d M Y H:i');
+
+        return $this->send(TelegramWebhook::ID_TIKET, implode("\n", $lines));
+    }
+
+    /**
+     * Notifikasi pendaftaran Domain/Hosting baru (webhook `tiket`).
+     */
+    public function sendServiceRegistrationCreated(ServiceRegistration $reg): bool
+    {
+        $lines = [
+            '<b>'.strtoupper($this->e($reg->typeLabel())).' BARU</b>',
+            '',
+            'Kode: <b>'.$this->e($reg->code).'</b>',
+            'Instansi: '.$this->e($reg->instansi),
+            'Pemohon: '.$this->e($reg->name).' — '.$this->e($reg->jabatan),
+            'Detail: '.$this->e($reg->specSummary()),
+        ];
+
+        $purpose = trim((string) $reg->purpose);
+
+        if ($purpose !== '') {
+            $lines[] = 'Tujuan: '.$this->e(mb_substr($purpose, 0, 200));
+        }
+
+        $lines[] = 'Waktu: '.$reg->created_at->format('d M Y H:i');
 
         return $this->send(TelegramWebhook::ID_TIKET, implode("\n", $lines));
     }

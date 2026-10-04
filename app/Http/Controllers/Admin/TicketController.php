@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\ServiceRegistration;
 use App\Models\Ticket;
 use App\Models\TicketActivity;
 use App\Models\VpsRequest;
@@ -53,17 +54,32 @@ class TicketController extends Controller
                 'instansi',
             ]);
 
-        // Filter status: status tiket → hanya tiket; status VPS → hanya VPS.
+        // ── Cabang pendaftaran Domain & Hosting (judul disusun di frontend) ──
+        $services = DB::table('service_registrations')
+            ->select([
+                'id', 'code',
+                DB::raw('NULL as title'),
+                DB::raw("CASE type WHEN 'domain' THEN 'Domain' ELSE 'Hosting' END as category"),
+                DB::raw('name as reporter_name'),
+                'status', 'created_at',
+                DB::raw("'service' as kind"),
+                'instansi',
+            ]);
+
+        // Filter status: status tiket → hanya tiket; status review (VPS/pendaftaran) → keduanya.
         if ($status !== '') {
             if (in_array($status, $ticketStatuses, true)) {
                 $tickets->where('status', $status);
                 $vps->whereRaw('1 = 0');
+                $services->whereRaw('1 = 0');
             } elseif (in_array($status, $vpsStatuses, true)) {
                 $vps->where('status', $status);
+                $services->where('status', $status);
                 $tickets->whereRaw('1 = 0');
             } else {
                 $tickets->whereRaw('1 = 0');
                 $vps->whereRaw('1 = 0');
+                $services->whereRaw('1 = 0');
             }
         }
 
@@ -75,10 +91,14 @@ class TicketController extends Controller
             $vps->where(fn ($w) => $w->where('code', 'like', $term)
                 ->orWhere('instansi', 'like', $term)
                 ->orWhere('name', 'like', $term));
+
+            $services->where(fn ($w) => $w->where('code', 'like', $term)
+                ->orWhere('instansi', 'like', $term)
+                ->orWhere('name', 'like', $term));
         }
 
         $rows = DB::query()
-            ->fromSub($tickets->unionAll($vps), 'rows')
+            ->fromSub($tickets->unionAll($vps)->unionAll($services), 'rows')
             ->orderByDesc('created_at')
             ->orderByDesc('id');
 
@@ -87,6 +107,7 @@ class TicketController extends Controller
             'proses' => Ticket::where('status', 'proses')->count(),
             'selesai' => Ticket::where('status', 'selesai')->count(),
             'vps_pending' => VpsRequest::where('status', VpsRequest::STATUS_PENDING)->count(),
+            'service_pending' => ServiceRegistration::where('status', ServiceRegistration::STATUS_PENDING)->count(),
         ];
 
         return Inertia::render('Admin/Layanan', [

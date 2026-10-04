@@ -158,6 +158,11 @@ Key: per-IP untuk route publik, per-user-id untuk route login.
 | POST | `/vps` | `vps.store` | 302 → `/vps` + flash (throttle 10/mnt) · detail §7.3 |
 | GET | `/vps/{id}/credentials` | `vps.credentials` | Download biner · pemilik/reviewer saja · 403/404 |
 | GET | `/vps/{id}/document` | `vps.document` | Download biner · pemilik/reviewer saja · 403/404 |
+| GET | `/domain` | `domain.index` | HTML · `ServiceRegistration` (type `domain`) |
+| POST | `/domain` | `domain.store` | 302 → `/domain` + flash (throttle 10/mnt) · §7.3a |
+| GET | `/hosting` | `hosting.index` | HTML · `ServiceRegistration` (type `hosting`) |
+| POST | `/hosting` | `hosting.store` | 302 → `/hosting` + flash (throttle 10/mnt) · §7.3a |
+| GET | `/service/{id}/document` | `service.document` | Download biner dokumen pendukung · pemilik/reviewer · 403/404 |
 | POST | `/notifications/{id}/read` | `notifications.read` | **302 back() selalu** · 404 bila bukan milik sendiri |
 | POST | `/notifications/read-all` | `notifications.readAll` | **302 back() selalu** |
 
@@ -170,6 +175,8 @@ Key: per-IP untuk route publik, per-user-id untuk route login.
 | GET | `/admin/vps` | `admin.vps.index` | HTML · `Admin/VpsReview` · `?status=`, paginasi 20 |
 | PATCH | `/admin/vps/{id}/status` | `admin.vps.status` | 302 back() + flash · body `status`, `admin_note` |
 | POST | `/admin/vps/{id}/credentials` | `admin.vps.credentials.upload` | 302 back() + flash · multipart `credential` (harus status approved) |
+| GET | `/admin/pendaftaran` | `admin.services.index` | HTML · `Admin/ServiceReview` · `?type=domain\|hosting`, `?status=`, paginasi 20 |
+| PATCH | `/admin/pendaftaran/{id}/status` | `admin.services.status` | 302 back() + flash · body `status` (approved/rejected), `admin_note` |
 
 ### 5.5 Admin saja (`role:admin`, prefix `/admin`)
 
@@ -408,6 +415,22 @@ curl -b cookies.txt -X POST "$BASE/vps" \
   -F 'supporting_document=@surat.pdf'
 ```
 
+### 7.3a `POST /domain` & `POST /hosting` — pendaftaran domain/hosting (login, throttle 10/mnt)
+
+Gate & respons sama dengan `POST /vps` (akun harus `approved`; sukses 302 + flash).
+Field umum: `name`, `nip`, `jabatan`, `instansi`, `purpose` (aturan sama §7.3),
+`supporting_document` (opsional, sama §7.3).
+
+| Field | `POST /domain` | `POST /hosting` |
+|---|---|---|
+| `domain_name` | **wajib**, format domain (`diskominfosandi.go.id`) · pesan: `Format nama domain tidak valid — contoh: diskominfosandi.go.id.` | opsional, format domain sama |
+| `hosting_package` | — | **wajib**, key `config('noc.service_registrations.hosting.packages')`: `shared-1gb`, `shared-5gb`, `vps-managed-2gb`, `vps-managed-4gb` |
+| `duration` | **wajib** (TAHUN): `1`, `2`, `3`, `5` | **wajib** (BULAN): `1`, `3`, `6`, `12` |
+
+Kode unik: `DOM-YYYYMMDD-NNNN` / `HST-YYYYMMDD-NNNN`. Tabel `service_registrations`
+(kolom `type` = `domain`\|`hosting`). Efek samping: lonceng in-app reviewer +
+pesan Telegram webhook `tiket` (§9).
+
 ### 7.4 Review VPS (admin/operator)
 
 `PATCH /admin/vps/{id}/status`
@@ -422,6 +445,11 @@ Efek: `reviewed_by` + `reviewed_at` diisi; notifikasi in-app ke pemilik **hanya 
 `POST /admin/vps/{id}/credentials` — wajib status `approved`, field `credential`
 (required, `pdf,jpg,jpeg,png,txt`, ≤5 MB) → mengganti file lama + notifikasi
 ke pemilik & seluruh reviewer (kecuali pengunggah).
+
+`PATCH /admin/pendaftaran/{id}/status` — body `status` (`approved`|`rejected`) dan
+`admin_note` (opsional ≤1000). Efek: `reviewed_by` + `reviewed_at` diisi; notifikasi
+in-app ke pemilik **hanya bila status berubah**. Tipe (`domain`/`hosting`) dibaca dari
+baris, bukan dari body.
 
 ### 7.5 Perangkat jaringan (admin)
 
@@ -492,13 +520,14 @@ Dua webhook tetap (tabel `telegram_webhooks`, dikelola di **Pengaturan → Webho
 
 | id | Dipakai untuk | Dipicu oleh |
 |---|---|---|
-| `tiket` | **Semua tiket masuk**: laporan gangguan baru **dan** request VPS baru | `POST /lapor`, `POST /vps` |
+| `tiket` | **Semua tiket masuk**: laporan gangguan baru, request VPS baru, **pendaftaran domain/hosting baru** | `POST /lapor`, `POST /vps`, `POST /domain`, `POST /hosting` |
 | `jaringan` | Transisi status perangkat `up ↔ down` | scheduler `monitor:poll` / `POST .../check` |
 
 | Method notifier | Isi pesan |
 |---|---|
 | `sendTicketCreated` | `LAPORAN GANGGUAN BARU`, kode, judul, kategori, pelapor, lokasi, tautan peta, waktu |
 | `sendVpsRequestCreated` | `REQUEST VPS BARU`, kode, instansi, pemohon, spek (core/GB/IP), OS, port (preset + tambahan), tujuan (≤200 char), waktu |
+| `sendServiceRegistrationCreated` | `PENDAFTARAN DOMAIN BARU` / `PENDAFTARAN HOSTING BARU`, kode, instansi, pemohon, detail (domain/paket/durasi), tujuan, waktu |
 | `sendStatusChange` | `PERUBAHAN STATUS JARINGAN`, nama/host perangkat, `ONLINE → DOWN`, waktu |
 | `sendTest` | pesan uji kirim — dipakai endpoint §6.6 |
 
@@ -584,6 +613,7 @@ respons sebelumnya) — selain itu server membalas **409**.
 | Hal | Sumber |
 |---|---|
 | Kategori tiket, status, port VPS, OS VPS | `config/noc.php` |
+| Label/paket/durasi pendaftaran Domain & Hosting (`service_registrations`) | `config/noc.php` |
 | Disk upload (`public` → `storage/app/public`) | `config/filesystems.php` |
 | Nama cookie sesi, lifetime, same-site | `config/session.php` |
 | Middleware `role`, prop Inertia bersama | `bootstrap/app.php`, `app/Http/Middleware/` |

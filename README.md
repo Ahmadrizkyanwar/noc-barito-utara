@@ -12,14 +12,20 @@ Kabupaten Barito Utara. Dibangun dengan **Laravel 12 + Inertia + Vue 3 + Tailwin
 | Laporan Gangguan | `/lapor` | publik |
 | 404 | semua route tak dikenal | publik |
 | **User Dashboard** (lapor + tiket saya) | `/dashboard` | login `role:user` |
+| Pendaftaran VPS | `/vps` | login (akun approved) |
+| Pendaftaran Domain | `/domain` | login (akun approved) |
+| Pendaftaran Hosting | `/hosting` | login (akun approved) |
 | **Admin Dashboard** (ringkasan + grafik) | `/admin` | login `role:admin` |
 
 ### Menu admin
 
 - **Jaringan** `/admin/jaringan` — CRUD perangkat, status SNMP/ICMP/RouterOS,
   cek manual, detail + grafik (CPU, RTT, RX/TX) per rentang.
-- **Layanan** `/admin/layanan` — ticketing laporan gangguan (filter, detail,
-  ubah status, catatan, foto).
+- **Layanan** `/admin/layanan` — ticketing laporan gangguan **+** pendaftaran
+  VPS/domain/hosting (filter, detail, ubah status, catatan, foto).
+- **Review VPS** `/admin/vps` — approve/tolak request VPS + upload kredensial.
+- **Review Pendaftaran** `/admin/pendaftaran` — approve/tolak pendaftaran
+  Domain & Hosting (filter tipe/status, dokumen pendukung).
 - **Pengaturan → Pengguna** `/admin/pengaturan/user` — CRUD user (admin/user).
 - **Pengaturan → Webhook Telegram** `/admin/pengaturan/webhook` — 2 entri tetap
   (Tiket & Jaringan): toggle, bot token, chat id, uji kirim.
@@ -74,7 +80,7 @@ Login default: `admin@noc.baritoutarakab.go.id` (atau `${WEB_USERNAME}@noc.barit
 composer install && npm install && npm run build
 php artisan migrate --seed
 php artisan serve             # atau: composer run dev
-php artisan test              # 158 tests
+php artisan test              # 178 tests
 ```
 
 ## Konfigurasi Environment
@@ -130,7 +136,7 @@ Cara 1/2 sudah teruji: NPM menjawab benar dengan SNI `kuma.…` dari IP lokal.
 
 ```bash
 php artisan test
-# 158 tests, 788 assertions — auth, guard role, tiket, VPS, device, webhook, telegram, probe
+# 178 tests, 925 assertions — auth, guard role, tiket, VPS, domain/hosting, device, webhook, telegram, probe
 ```
 
 Probe ICMP diuji dengan stub deterministik (image test tidak punya binary

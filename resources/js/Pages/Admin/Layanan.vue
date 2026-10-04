@@ -25,14 +25,23 @@ function goTo(page) {
     router.get(route('admin.tickets.index'), { ...props.filters, page }, { preserveScroll: true });
 }
 
+// Baris registrasi (VPS / Domain / Hosting) — judul & tautan disusun sendiri
 const isVps = (t) => t.kind === 'vps';
+const isService = (t) => t.kind === 'service';
+const isRegistration = (t) => isVps(t) || isService(t);
 
-// Judul baris: request VPS disusun dari instansi + pelapor
-const titleOf = (t) =>
-    isVps(t) ? `Request VPS — ${t.instansi} · ${t.reporter_name}` : t.title;
+// Judul baris: request VPS/pendaftaran disusun dari instansi + pelapor
+const titleOf = (t) => {
+    if (isVps(t)) return `Pendaftaran VPS — ${t.instansi} · ${t.reporter_name}`;
+    if (isService(t)) return `Pendaftaran ${t.category} — ${t.instansi} · ${t.reporter_name}`;
+    return t.title;
+};
 
-const detailHref = (t) =>
-    isVps(t) ? route('admin.vps.index') : route('admin.tickets.show', t.id);
+const detailHref = (t) => {
+    if (isVps(t)) return route('admin.vps.index');
+    if (isService(t)) return route('admin.services.index', t.category === 'Domain' ? { type: 'domain' } : { type: 'hosting' });
+    return route('admin.tickets.show', t.id);
+};
 
 const statusClass = (s) =>
     ({
@@ -50,12 +59,14 @@ const statusClass = (s) =>
         <div class="flex flex-wrap items-center justify-between gap-3">
             <div>
                 <h1 class="text-xl font-bold">Layanan — Ticketing Gangguan</h1>
-                <p class="text-sm text-slate-500">Kelola laporan gangguan dari masyarakat dan user</p>
+                <p class="text-sm text-slate-500">
+                    Kelola laporan gangguan serta pendaftaran VPS, domain, dan hosting
+                </p>
             </div>
         </div>
 
         <!-- Statistik -->
-        <div class="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-4">
+        <div class="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-5">
             <div class="rounded-xl border border-blue-200 bg-blue-50 p-4">
                 <p class="text-xs font-semibold uppercase tracking-wide text-blue-700">Baru</p>
                 <p class="mt-1 text-3xl font-black text-blue-700">{{ stats.open }}</p>
@@ -71,6 +82,10 @@ const statusClass = (s) =>
             <div class="rounded-xl border border-indigo-200 bg-indigo-50 p-4">
                 <p class="text-xs font-semibold uppercase tracking-wide text-indigo-700">Request VPS</p>
                 <p class="mt-1 text-3xl font-black text-indigo-700">{{ stats.vps_pending ?? 0 }}</p>
+            </div>
+            <div class="rounded-xl border border-violet-200 bg-violet-50 p-4">
+                <p class="text-xs font-semibold uppercase tracking-wide text-violet-700">Domain &amp; Hosting</p>
+                <p class="mt-1 text-3xl font-black text-violet-700">{{ stats.service_pending ?? 0 }}</p>
             </div>
         </div>
 
@@ -112,7 +127,7 @@ const statusClass = (s) =>
                             <Link
                                 :href="detailHref(t)"
                                 class="font-mono text-xs font-bold hover:underline"
-                                :class="isVps(t) ? 'text-indigo-700' : 'text-brand-700'"
+                                :class="isRegistration(t) ? 'text-indigo-700' : 'text-brand-700'"
                             >
                                 {{ t.code }}
                             </Link>
@@ -125,7 +140,7 @@ const statusClass = (s) =>
                         <td class="px-4 py-3">
                             <span
                                 class="rounded px-1.5 py-0.5 text-[11px] font-bold"
-                                :class="isVps(t) ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-100 text-slate-600'"
+                                :class="isRegistration(t) ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-100 text-slate-600'"
                             >{{ t.category }}</span>
                         </td>
                         <td class="px-4 py-3 text-xs text-slate-500">{{ t.reporter_name ?? t.reporter?.name ?? '—' }}</td>

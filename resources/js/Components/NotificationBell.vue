@@ -33,7 +33,7 @@ onMounted(() => document.addEventListener('click', onDocClick));
 onUnmounted(() => document.removeEventListener('click', onDocClick));
 
 const iconOf = (kind) =>
-    ({ register: '👤', vps_request: '🖥️', vps_status: '✅', vps_credentials: '🔑' })[kind] ?? '🔔';
+    ({ register: '👤', vps_request: '🖥️', vps_status: '✅', vps_credentials: '🔑', service_request: '🌐', service_status: '✅' })[kind] ?? '🔔';
 
 const fmtTime = (d) => new Date(d).toLocaleString('id-ID', {
     day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit',

@@ -15,6 +15,7 @@ const menus = [
     { label: 'Layanan (Tiket)', href: route('admin.tickets.index'), prefix: '/admin/layanan', roles: ['admin'] },
     { label: 'Registrasi User', href: route('admin.registrations.index'), prefix: '/admin/registrasi', roles: ['admin', 'operator'] },
     { label: 'Review VPS', href: route('admin.vps.index'), prefix: '/admin/vps', roles: ['admin', 'operator'] },
+    { label: 'Review Pendaftaran', href: route('admin.services.index'), prefix: '/admin/pendaftaran', roles: ['admin', 'operator'] },
     { label: 'Pengguna', href: route('admin.users.index'), prefix: '/admin/pengaturan/user', roles: ['admin'] },
     { label: 'Webhook Telegram', href: route('admin.webhooks.index'), prefix: '/admin/pengaturan/webhook', roles: ['admin'] },
 ];

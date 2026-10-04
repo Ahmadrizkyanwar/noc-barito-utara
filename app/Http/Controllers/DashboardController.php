@@ -6,6 +6,7 @@ use App\Models\DashboardWidget;
 use App\Models\Device;
 use App\Models\DeviceMetric;
 use App\Models\InterfaceMetric;
+use App\Models\ServiceRegistration;
 use App\Models\Ticket;
 use App\Models\VpsRequest;
 use Illuminate\Http\RedirectResponse;
@@ -273,18 +274,54 @@ class DashboardController extends Controller
             ->latest()
             ->get();
 
+        $user = $request->user();
+
+        $serviceSummary = fn (string $type): array => [
+            'total' => $user->serviceRegistrations()->where('type', $type)->count(),
+            'pending' => $user->serviceRegistrations()->where('type', $type)
+                ->where('status', ServiceRegistration::STATUS_PENDING)->count(),
+        ];
+
         return Inertia::render('Dashboard', [
             'view' => 'user',
             'tickets' => $tickets,
             'categories' => config('noc.ticket_categories'),
             'statuses' => config('noc.ticket_statuses'),
             'vps' => [
-                'status' => $request->user()->status,
-                'total' => $request->user()->vpsRequests()->count(),
-                'pending' => $request->user()->vpsRequests()->where('status', VpsRequest::STATUS_PENDING)->count(),
+                'status' => $user->status,
+                'total' => $user->vpsRequests()->count(),
+                'pending' => $user->vpsRequests()->where('status', VpsRequest::STATUS_PENDING)->count(),
             ],
             'vpsStatuses' => config('noc.vps_statuses'),
             'vpsOperatingSystems' => config('noc.vps_operating_systems'),
+            'serviceSummary' => [
+                'status' => $user->status,
+                'domain' => $serviceSummary(ServiceRegistration::TYPE_DOMAIN),
+                'hosting' => $serviceSummary(ServiceRegistration::TYPE_HOSTING),
+            ],
+            'serviceStatuses' => config('noc.service_statuses'),
+            'serviceTypes' => collect(array_keys(config('noc.service_registrations')))
+                ->mapWithKeys(fn ($t) => [$t => config('noc.service_registrations.'.$t.'.label')])
+                ->all(),
+            'servicePackages' => (array) config('noc.service_registrations.hosting.packages', []),
+            'serviceDurations' => collect(array_keys(config('noc.service_registrations')))
+                ->mapWithKeys(fn ($t) => [$t => (array) config('noc.service_registrations.'.$t.'.durations', [])])
+                ->all(),
+            'serviceRequests' => $user->serviceRegistrations()
+                ->latest()
+                ->take(5)
+                ->get([
+                    'id', 'code', 'type', 'domain_name', 'hosting_package', 'duration',
+                    'name', 'instansi', 'purpose', 'status', 'admin_note',
+                    'supporting_document', 'created_at',
+                ])
+                ->map(function (ServiceRegistration $r) {
+                    if ($r->supporting_document !== null && ! Storage::disk('public')->exists($r->supporting_document)) {
+                        $r->supporting_document = null; // file hilang → jangan tampilkan tombol unduh
+                    }
+
+                    return $r;
+                }),
             'vpsRequests' => $request->user()->vpsRequests()
                 ->latest()
                 ->take(5)

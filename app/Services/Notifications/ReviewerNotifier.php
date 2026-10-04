@@ -2,6 +2,7 @@
 
 namespace App\Services\Notifications;
 
+use App\Models\ServiceRegistration;
 use App\Models\User;
 use App\Models\VpsRequest;
 use App\Notifications\Notice;
@@ -53,6 +54,34 @@ class ReviewerNotifier
             'Request VPS '.$label,
             $request->code.' — '.$label.($request->admin_note ? '. Catatan: '.$request->admin_note : '.'),
             route('vps.index', [], false),
+        ));
+    }
+
+    /**
+     * Pendaftaran Domain/Hosting baru → lonceng seluruh reviewer.
+     */
+    public function serviceRegistrationReceived(ServiceRegistration $reg): void
+    {
+        $this->toReviewers(new Notice(
+            'service_request',
+            $reg->typeLabel().' baru',
+            $reg->code.' — '.$reg->instansi.' ('.$reg->name.') menunggu review.',
+            route('admin.services.index', [], false),
+        ));
+    }
+
+    /**
+     * Hasil review pendaftaran Domain/Hosting → pemilik.
+     */
+    public function serviceStatusUpdated(ServiceRegistration $reg): void
+    {
+        $label = config('noc.service_statuses.'.$reg->status, $reg->status);
+
+        $reg->user?->notify(new Notice(
+            'service_status',
+            $reg->typeLabel().' '.$label,
+            $reg->code.' — '.$label.($reg->admin_note ? '. Catatan: '.$reg->admin_note : '.'),
+            route('dashboard', [], false),
         ));
     }
 

@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Admin\DeviceController;
 use App\Http\Controllers\Admin\RegistrationController;
+use App\Http\Controllers\Admin\ServiceReviewController;
 use App\Http\Controllers\Admin\TicketController as AdminTicketController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\VpsReviewController;
@@ -11,6 +12,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\LandingController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\ReportController;
+use App\Http\Controllers\ServiceRegistrationController;
 use App\Http\Controllers\VpsRequestController;
 use Illuminate\Support\Facades\Route;
 
@@ -75,6 +77,26 @@ Route::middleware('auth')->group(function () {
     Route::get('/vps/{vpsRequest}/document', [VpsRequestController::class, 'document'])
         ->name('vps.document');
 
+    // Pendaftaran Domain & Hosting — terkunci sampai akun disetujui
+    // (dicek di controller; tipe diambil dari route default `type`)
+    Route::get('/domain', [ServiceRegistrationController::class, 'index'])
+        ->defaults('type', 'domain')
+        ->name('domain.index');
+    Route::post('/domain', [ServiceRegistrationController::class, 'store'])
+        ->defaults('type', 'domain')
+        ->name('domain.store')
+        ->middleware('throttle:10,1');
+    Route::get('/hosting', [ServiceRegistrationController::class, 'index'])
+        ->defaults('type', 'hosting')
+        ->name('hosting.index');
+    Route::post('/hosting', [ServiceRegistrationController::class, 'store'])
+        ->defaults('type', 'hosting')
+        ->name('hosting.store')
+        ->middleware('throttle:10,1');
+    // Unduh dokumen pendukung pendaftaran (pemilik ATAU reviewer)
+    Route::get('/service/{serviceRegistration}/document', [ServiceRegistrationController::class, 'document'])
+        ->name('service.document');
+
     // Lonceng notifikasi
     Route::post('/notifications/{notification}/read', [NotificationController::class, 'read'])
         ->name('notifications.read');
@@ -98,6 +120,11 @@ Route::middleware(['auth', 'role:admin,operator'])->prefix('admin')->name('admin
     // Upload dokumen kredensial SETELAH disetujui
     Route::post('/vps/{vpsRequest}/credentials', [VpsReviewController::class, 'uploadCredentials'])
         ->name('vps.credentials.upload');
+
+    // Review pendaftaran Domain & Hosting (?type=domain|hosting & ?status=)
+    Route::get('/pendaftaran', [ServiceReviewController::class, 'index'])->name('services.index');
+    Route::patch('/pendaftaran/{serviceRegistration}/status', [ServiceReviewController::class, 'updateStatus'])
+        ->name('services.status');
 });
 
 /*

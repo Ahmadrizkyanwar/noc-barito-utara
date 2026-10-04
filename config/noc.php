@@ -108,6 +108,52 @@ return [
         'rejected' => 'Ditolak',
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Pendaftaran Domain & Hosting
+    |--------------------------------------------------------------------------
+    | Satu tabel `service_registrations` dipakai bersama, dibedakan kolom
+    | `type` (domain|hosting). Field khusus: `domain_name` (domain wajib /
+    | hosting opsional), `hosting_package`, `duration` (tahun utk domain,
+    | bulan utk hosting).
+    */
+    'service_registrations' => [
+        'domain' => [
+            'label' => 'Pendaftaran Domain',
+            'code_prefix' => 'DOM',
+            'route_prefix' => 'domain',
+            'durations' => [
+                1 => '1 tahun',
+                2 => '2 tahun',
+                3 => '3 tahun',
+                5 => '5 tahun',
+            ],
+        ],
+        'hosting' => [
+            'label' => 'Pendaftaran Hosting',
+            'code_prefix' => 'HST',
+            'route_prefix' => 'hosting',
+            'packages' => [
+                'shared-1gb' => 'Shared Hosting 1 GB',
+                'shared-5gb' => 'Shared Hosting 5 GB',
+                'vps-managed-2gb' => 'VPS Managed 2 GB',
+                'vps-managed-4gb' => 'VPS Managed 4 GB',
+            ],
+            'durations' => [
+                1 => '1 bulan',
+                3 => '3 bulan',
+                6 => '6 bulan',
+                12 => '12 bulan',
+            ],
+        ],
+    ],
+
+    'service_statuses' => [
+        'pending' => 'Menunggu Review',
+        'approved' => 'Disetujui',
+        'rejected' => 'Ditolak',
+    ],
+
     'registration_statuses' => [
         'pending' => 'Menunggu Validasi',
         'approved' => 'Disetujui',
