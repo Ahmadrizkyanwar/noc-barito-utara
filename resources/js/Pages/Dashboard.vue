@@ -85,6 +85,10 @@ const svcSpecOf = (r) => {
     return parts.join(' · ') || '—';
 };
 const svcTotal = () => (props.serviceSummary.domain?.total ?? 0) + (props.serviceSummary.hosting?.total ?? 0);
+const svcPendingTotal = () =>
+    (props.vps.pending ?? 0) +
+    (props.serviceSummary.domain?.pending ?? 0) +
+    (props.serviceSummary.hosting?.pending ?? 0);
 
 // ── Format bitrate ──
 function fmt(bps) {
@@ -630,67 +634,39 @@ watch(() => props.widgets, () => rerender(), { deep: true });
             <h1 class="text-xl font-bold">Dashboard Saya</h1>
             <p class="mt-1 text-sm text-slate-500">Laporkan gangguan dan pantau status penanganan laporan Anda.</p>
 
-            <!-- Kartu Pendaftaran: VPS · Domain · Hosting -->
-            <div class="mt-4 space-y-3">
-                <div class="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white p-4">
-                    <div>
-                        <p class="text-sm font-bold">Pendaftaran VPS</p>
-                        <p class="mt-0.5 text-xs text-slate-500">
-                            Status akun:
-                            <b :class="accountStatusClass(vps.status)">{{ accountStatusLabel(vps.status) }}</b>
-                            · {{ vps.total ?? 0 }} pendaftaran
-                            <template v-if="vps.pending"> · {{ vps.pending }} menunggu review</template>
-                        </p>
-                    </div>
+            <!-- Kartu Pendaftaran Layanan (VPS · Domain · Hosting digabung) -->
+            <div class="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white p-4">
+                <div>
+                    <p class="text-sm font-bold">Pendaftaran Layanan</p>
+                    <p class="mt-0.5 text-xs text-slate-500">
+                        Status akun:
+                        <b :class="accountStatusClass(serviceSummary.status ?? vps.status)">
+                            {{ accountStatusLabel(serviceSummary.status ?? vps.status) }}
+                        </b>
+                        · VPS {{ vps.total ?? 0 }}
+                        · Domain {{ serviceSummary.domain?.total ?? 0 }}
+                        · Hosting {{ serviceSummary.hosting?.total ?? 0 }}
+                        <template v-if="svcPendingTotal()"> · {{ svcPendingTotal() }} menunggu review</template>
+                    </p>
+                </div>
+                <div class="flex flex-wrap gap-2">
                     <Link
                         :href="route('vps.index')"
                         class="rounded-lg bg-brand-700 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-800"
                     >
-                        Buka Pendaftaran VPS →
+                        Pendaftaran VPS →
                     </Link>
-                </div>
-
-                <div class="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white p-4">
-                    <div>
-                        <p class="text-sm font-bold">Pendaftaran Domain</p>
-                        <p class="mt-0.5 text-xs text-slate-500">
-                            Status akun:
-                            <b :class="accountStatusClass(serviceSummary.status)">
-                                {{ accountStatusLabel(serviceSummary.status) }}
-                            </b>
-                            · {{ serviceSummary.domain?.total ?? 0 }} pendaftaran
-                            <template v-if="serviceSummary.domain?.pending">
-                                · {{ serviceSummary.domain.pending }} menunggu review
-                            </template>
-                        </p>
-                    </div>
                     <Link
                         :href="route('domain.index')"
                         class="rounded-lg bg-brand-700 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-800"
                     >
-                        Buka Pendaftaran Domain →
+                        Pendaftaran Domain →
                     </Link>
-                </div>
-
-                <div class="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white p-4">
-                    <div>
-                        <p class="text-sm font-bold">Pendaftaran Hosting</p>
-                        <p class="mt-0.5 text-xs text-slate-500">
-                            Status akun:
-                            <b :class="accountStatusClass(serviceSummary.status)">
-                                {{ accountStatusLabel(serviceSummary.status) }}
-                            </b>
-                            · {{ serviceSummary.hosting?.total ?? 0 }} pendaftaran
-                            <template v-if="serviceSummary.hosting?.pending">
-                                · {{ serviceSummary.hosting.pending }} menunggu review
-                            </template>
-                        </p>
-                    </div>
                     <Link
                         :href="route('hosting.index')"
                         class="rounded-lg bg-brand-700 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-800"
                     >
-                        Buka Pendaftaran Hosting →
+                        Pendaftaran Hosting →
                     </Link>
                 </div>
             </div>
